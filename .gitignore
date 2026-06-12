@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Databases (contains private household data)
+database.db
+test_database.db
+modules/ia_memoria/test_database.db
+tests/test_database.db
+
+# Active Learning Dynamic Configs (contains private feedback logs and training models)
+modules/training/feedback.json
+modules/training/Modelfile
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

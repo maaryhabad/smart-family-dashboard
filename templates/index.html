@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DashFamília - Dashboard de Gestão Familiar</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🏡</span>
+                    <h1>DashFamília</h1>
+                </div>
+            </div>
+
+            <!-- Physical NAS Connection Widget -->
+            <div class="nas-widget" id="nas-widget">
+                <div class="nas-header">
+                    <div class="nas-title-group">
+                        <span class="nas-icon">💾</span>
+                        <span class="nas-title">NVMe NAS Local</span>
+                    </div>
+                    <span class="status-dot online animated-pulse"></span>
+                </div>
+                <div class="nas-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value text-green" id="nas-status">Carregando...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Conexão:</span>
+                        <span class="detail-value" id="nas-conn">Carregando...</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Unidade:</span>
+                        <span class="detail-value text-highlight" id="nas-drive">Carregando...</span>
+                    </div>
+                    <div class="storage-bar-container">
+                        <div class="storage-bar-header">
+                            <span>Armazenamento</span>
+                            <span id="nas-percentage">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="nas-storage-bar" style="width: 0%;"></div>
+                        </div>
+                        <div class="storage-numbers">
+                            <span id="nas-used">0 GB</span> livre de <span id="nas-total">0 GB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-tab="ia-memoria" id="btn-ia-memoria">
+                    <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2a10 10 0 0 1 7.54 16.59l-1.42-1.42A8 8 0 1 0 6.18 17.5l-1.42 1.42A10 10 0 0 1 12 2z"/>
+                        <path d="M12 6a6 6 0 0 1 4.52 9.94l-1.42-1.42A4 4 0 1 0 8.9 14.5l-1.42 1.42A6 6 0 0 1 12 6z"/>
+                        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                    </svg>
+                    <span>Memória da Casa</span>
+                </button>
+                <button class="nav-item" data-tab="financas" id="btn-financas">
+                    <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="1" x2="12" y2="23"/>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                    <span>Controle Financeiro</span>
+                </button>
+                <button class="nav-item" data-tab="calendario" id="btn-calendario">
+                    <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span>Calendário Dinâmico</span>
+                </button>
+                <button class="nav-item" data-tab="todo-gamer" id="btn-todo-gamer">
+                    <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="6" width="20" height="12" rx="2"/>
+                        <path d="M6 12h4m-2-2v4m7-2h.01M19 10h.01"/>
+                    </svg>
+                    <span>To-Do List Gamer</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="user-pill">
+                    <span class="user-avatar">👩‍💻</span>
+                    <span class="user-name">Mariana (Admin)</span>
+                </span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="main-header">
+                <div class="header-info">
+                    <h2 id="current-tab-title">Memória da Casa</h2>
+                    <p class="subtitle" id="current-tab-subtitle">Consulte o cérebro da inteligência do lar</p>
+                </div>
+                <div class="header-widgets">
+                    <div class="time-widget">
+                        <span id="live-clock">00:00:00</span>
+                        <span class="separator">|</span>
+                        <span id="live-date">Carregando data...</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Tab Container -->
+            <div class="tab-viewport">
+                
+                <!-- TAB 1: IA MEMÓRIA -->
+                <section class="tab-content active" id="tab-ia-memoria">
+                    <div class="ia-memoria-layout">
+                        <!-- Coluna da Esquerda: Conversa com IA -->
+                        <div class="chat-container glass-panel">
+                            <div class="chat-header">
+                                <div class="ai-status">
+                                    <span class="ai-avatar">🤖</span>
+                                    <div>
+                                        <h3>Assistente DashFamília</h3>
+                                        <span class="badge badge-success" id="ai-status-badge">Online & Aprendendo</span>
+                                    </div>
+                                </div>
+                            </div>
+    
+                            <!-- Chat Messages Display -->
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="message system-message">
+                                    🤖 Olá, Mariana! Sou a inteligência do lar. Você pode me fazer perguntas sobre onde as coisas estão guardadas, senhas de acesso, contatos importantes da casa e muito mais. O que você gostaria de saber hoje?
+                                </div>
+                            </div>
+    
+                            <!-- Suggested Query Chips -->
+                            <div class="chat-chips">
+                                <span class="chip" onclick="sendSuggested('Qual a senha do Wi-Fi de visitas?')">🔑 Senha do Wi-Fi</span>
+                                <span class="chip" onclick="sendSuggested('Onde está a chave reserva do carro?')">🔑 Chave reserva</span>
+                                <span class="chip" onclick="sendSuggested('Qual o número do encanador?')">📞 Encanador</span>
+                                <span class="chip" onclick="sendSuggested('Onde guardamos as decorações de Natal?')">📦 Caixas de Natal</span>
+                            </div>
+    
+                            <!-- Chat Input Bar -->
+                            <div class="chat-input-bar">
+                                <input type="text" id="chat-input" placeholder="Pergunte ex: 'Onde está a chave reserva?' ou 'Qual o contato do encanador?'..." autocomplete="off">
+                                <button id="btn-chat-mic" class="btn btn-secondary btn-mic" title="Falar (Ditado)">
+                                    <span>🎙️</span>
+                                </button>
+                                <button id="btn-chat-send" class="btn btn-primary">
+                                    <span>Enviar</span>
+                                    <svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="22" y1="2" x2="11" y2="13"/>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Coluna da Direita: Gerenciador de Memórias -->
+                        <div class="memory-vault-container glass-panel">
+                            <div class="vault-header">
+                                <h3>🗄️ Banco de Memórias</h3>
+                                <button id="btn-add-memory" class="btn btn-primary btn-sm">
+                                    <span>+ Nova Memória</span>
+                                </button>
+                            </div>
+                            
+                            <div class="vault-search-row">
+                                <input type="text" id="vault-search" placeholder="Buscar nas memórias..." autocomplete="off">
+                            </div>
+                            
+                            <div class="vault-filter-chips" id="vault-category-filters">
+                                <span class="filter-chip active" data-category="all">Todos</span>
+                                <span class="filter-chip" data-category="Senhas">🔑 Senhas</span>
+                                <span class="filter-chip" data-category="Mercado">🛒 Mercado</span>
+                                <span class="filter-chip" data-category="Segurança">🛡️ Segurança</span>
+                                <span class="filter-chip" data-category="Contatos">📞 Contatos</span>
+                                <span class="filter-chip" data-category="Ferramentas">🔧 Ferramentas</span>
+                                <span class="filter-chip" data-category="Organização">📦 Org.</span>
+                                <span class="filter-chip" data-category="Pets">🐱 Pets</span>
+                                <span class="filter-chip" data-category="Geral">📝 Geral</span>
+                            </div>
+                            
+                            <div class="memories-list" id="memories-list-vault">
+                                <!-- Cards will be injected via JavaScript -->
+                                <div class="vault-loading">Carregando memórias...</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: CONTROLE FINANCEIRO -->
+                <section class="tab-content" id="tab-financas">
+                    <div class="finance-dashboard">
+                        <!-- Key Figures Cards -->
+                        <div class="finance-cards-grid">
+                            <div class="card-metric glass-panel border-green">
+                                <span class="card-icon text-green">📈</span>
+                                <div class="metric-info">
+                                    <span class="label">Receita Familiar</span>
+                                    <h3 class="value" id="fin-income">R$ 0,00</h3>
+                                </div>
+                            </div>
+                            <div class="card-metric glass-panel border-red">
+                                <span class="card-icon text-red">📉</span>
+                                <div class="metric-info">
+                                    <span class="label">Despesas Globais</span>
+                                    <h3 class="value" id="fin-expenses">R$ 0,00</h3>
+                                </div>
+                            </div>
+                            <div class="card-metric glass-panel border-blue">
+                                <span class="card-icon text-blue">💰</span>
+                                <div class="metric-info">
+                                    <span class="label">Economia do Mês</span>
+                                    <h3 class="value" id="fin-savings">R$ 0,00</h3>
+                                </div>
+                            </div>
+                            <div class="card-metric glass-panel border-purple">
+                                <span class="card-icon text-purple">📊</span>
+                                <div class="metric-info">
+                                    <span class="label">Taxa de Poupança</span>
+                                    <h3 class="value" id="fin-rate">0%</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="finance-details-grid">
+                            <!-- Transactions -->
+                            <div class="glass-panel finance-section flex-2">
+                                <h3>Transações Recentes</h3>
+                                <div class="table-container">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Descrição</th>
+                                                <th>Categoria</th>
+                                                <th>Data</th>
+                                                <th>Responsável</th>
+                                                <th class="text-right">Valor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="finance-transactions">
+                                            <!-- Dynamically injected -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Goals and Categories -->
+                            <div class="flex-1 flex-column gap-md">
+                                <!-- Goals -->
+                                <div class="glass-panel finance-section">
+                                    <h3>Metas Familiares</h3>
+                                    <div class="goals-container" id="finance-goals">
+                                        <!-- Dynamically injected -->
+                                    </div>
+                                </div>
+                                <!-- Budget Chart Mock -->
+                                <div class="glass-panel finance-section">
+                                    <h3>Divisão de Orçamento</h3>
+                                    <div class="categories-bar-list" id="finance-categories">
+                                        <!-- Dynamically injected -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: CALENDÁRIO DINÂMICO -->
+                <section class="tab-content" id="tab-calendario">
+                    <div class="calendar-layout-grid">
+                        <div class="glass-panel calendar-main">
+                            <div class="calendar-nav-header">
+                                <button class="btn btn-secondary btn-sm" id="cal-prev-btn">&lt; Anterior</button>
+                                <h3 id="cal-month-title">Junho 2026</h3>
+                                <button class="btn btn-secondary btn-sm" id="cal-next-btn">Próximo &gt;</button>
+                            </div>
+                            
+                            <!-- Calendar Grid -->
+                            <div class="calendar-grid">
+                                <div class="day-name">Dom</div>
+                                <div class="day-name">Seg</div>
+                                <div class="day-name">Ter</div>
+                                <div class="day-name">Qua</div>
+                                <div class="day-name">Qui</div>
+                                <div class="day-name">Sex</div>
+                                <div class="day-name">Sáb</div>
+                                
+                                <div class="calendar-days-container" id="calendar-days">
+                                    <!-- Injected via JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar Events list -->
+                        <div class="glass-panel calendar-sidebar">
+                            <h3>Eventos Agendados</h3>
+                            <div class="events-list" id="calendar-events-list">
+                                <!-- Injected via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 4: TO-DO LIST GAMER -->
+                <section class="tab-content" id="tab-todo-gamer">
+                    <div class="gamer-layout">
+                        <!-- Gamer Profile Header -->
+                        <div class="gamer-profile-card glass-panel">
+                            <div class="profile-info-group">
+                                <div class="profile-avatar" id="gamer-avatar">🛡️</div>
+                                <div class="profile-text">
+                                    <div class="name-class">
+                                        <h3 id="gamer-name">Família Aventureira</h3>
+                                        <span class="gamer-badge" id="gamer-class">Classe: Guardiões do Lar</span>
+                                    </div>
+                                    <div class="level-indicator">
+                                        <span>Nível <strong id="gamer-level">1</strong></span>
+                                        <div class="xp-bar-container">
+                                            <div class="xp-bar-fill" id="gamer-xp-bar" style="width: 0%;"></div>
+                                        </div>
+                                        <span class="xp-text" id="gamer-xp-text">0 / 0 XP</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gold-counter">
+                                <span class="gold-icon">🪙</span>
+                                <span class="gold-val" id="gamer-gold">0</span>
+                                <span class="gold-label">Ouro</span>
+                            </div>
+                        </div>
+
+                        <!-- Quests and Rewards Container -->
+                        <div class="gamer-sections-grid">
+                            <!-- Active Quests -->
+                            <div class="glass-panel gamer-section flex-2">
+                                <div class="section-title-row">
+                                    <h3>📜 Quadro de Missões Ativas</h3>
+                                    <button class="btn btn-secondary btn-sm" id="btn-reset-quests">Recarregar Diárias</button>
+                                </div>
+                                <div class="quests-list" id="quests-list">
+                                    <!-- Dynamically injected -->
+                                </div>
+                            </div>
+
+                            <!-- Rewards Shop -->
+                            <div class="glass-panel gamer-section flex-1">
+                                <h3>🛒 Loja de Recompensas</h3>
+                                <div class="rewards-list" id="rewards-list">
+                                    <!-- Dynamically injected -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit/Add Memory Modal -->
+    <div class="modal-overlay" id="memory-modal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3 id="modal-title">Editar Memória</h3>
+                <button class="btn-close-modal" id="btn-close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="memory-form" onsubmit="event.preventDefault();">
+                    <input type="hidden" id="edit-mem-id">
+                    
+                    <div class="form-group">
+                        <label for="edit-mem-category">Categoria</label>
+                        <select id="edit-mem-category" required>
+                            <option value="Senhas">🔑 Senhas</option>
+                            <option value="Mercado">🛒 Mercado</option>
+                            <option value="Segurança">🛡️ Segurança</option>
+                            <option value="Contatos">📞 Contatos</option>
+                            <option value="Ferramentas">🔧 Ferramentas</option>
+                            <option value="Organização">📦 Organização</option>
+                            <option value="Pets">🐱 Pets</option>
+                            <option value="Geral">📝 Geral</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-mem-key">Assunto (Palavra-chave)</label>
+                        <input type="text" id="edit-mem-key" placeholder="Ex: wifi visitas, chave reserva carro..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-mem-content">Conteúdo da Memória</label>
+                        <div class="textarea-voice-wrapper">
+                            <textarea id="edit-mem-content" rows="4" placeholder="Escreva os detalhes da memória aqui..." required></textarea>
+                            <button type="button" id="btn-modal-mic" class="btn-modal-mic" title="Ditar Conteúdo">
+                                <span>🎙️</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-save-modal">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- NLU Feedback Correction Modal -->
+    <div class="modal-overlay" id="feedback-modal">
+        <div class="modal-content glass-panel" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 style="margin:0;">👎 Corrigir Entendimento da IA</h3>
+                <button class="btn-close-modal" id="btn-close-feedback-modal" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="feedback-form" onsubmit="event.preventDefault();">
+                    <input type="hidden" id="feedback-msg-text">
+                    
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display:block; margin-bottom:5px; font-weight:500;">Frase que você digitou:</label>
+                        <blockquote id="feedback-original-msg" style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-left: 3px solid #818cf8; border-radius: 4px; font-style: italic; margin: 0 0 15px 0; color: rgba(255,255,255,0.85);"></blockquote>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="feedback-correct-intent" style="display:block; margin-bottom:5px; font-weight:500;">Qual era a intenção correta?</label>
+                        <select id="feedback-correct-intent" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <option value="salvar">Anote ou salve esta informação na memória</option>
+                            <option value="buscar">Procure ou busque esta informação nas memórias</option>
+                            <option value="adicionar_lista">Adicione itens na lista de compras</option>
+                            <option value="remover_lista">Remova itens da lista de compras</option>
+                            <option value="limpar_lista">Comprei tudo / Limpe a lista de compras</option>
+                            <option value="conversa">Conversa geral ou saudação</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="feedback-items-group" style="margin-bottom: 15px;">
+                        <label for="feedback-details-content" id="feedback-details-label" style="display:block; margin-bottom:5px; font-weight:500;">Conteúdo / Itens (Separados por vírgula se forem múltiplos):</label>
+                        <input type="text" id="feedback-details-content" placeholder="Ex: Areia dos gatos, café..." style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                    </div>
+                    
+                    <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-feedback-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-submit-feedback-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Corrigir e Treinar IA</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification system -->
+    <div class="toast-container" id="toast-container"></div>
+    
+    <!-- Main JavaScript File -->
+    <script src="{{ url_for('static', filename='js/app.js') }}?v=1.2"></script>
+</body>
+</html>
