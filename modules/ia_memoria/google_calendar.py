@@ -109,6 +109,40 @@ def push_event_to_google_background(event_id, event_title, event_date, event_tim
     t.daemon = True
     t.start()
 
+def delete_event_from_google(google_event_id, service=None):
+    """Deletes an event from Google Calendar by its Google Event ID."""
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    credentials_path = os.path.join(root_dir, 'credentials.json')
+    
+    if not os.path.exists(credentials_path):
+        print("[Google Calendar] Delete skipped: 'credentials.json' not found at project root.")
+        return False
+        
+    try:
+        if not service:
+            service = get_calendar_service(credentials_path)
+            if not service:
+                return False
+                
+        calendar_id = get_calendar_id()
+        print(f"[Google Calendar] Deleting event '{google_event_id}' from Google Calendar ({calendar_id})...")
+        service.events().delete(calendarId=calendar_id, eventId=google_event_id).execute()
+        print(f"[Google Calendar] Delete successful for Google Event ID: {google_event_id}")
+        return True
+    except Exception as e:
+        print(f"[Google Calendar] Error deleting event: {e}")
+        return False
+
+def delete_event_from_google_background(google_event_id):
+    """Runs the Google Calendar deletion in a background thread."""
+    t = threading.Thread(
+        target=delete_event_from_google,
+        args=(google_event_id,)
+    )
+    t.daemon = True
+    t.start()
+
+
 def sync_calendars(db_path=None):
     """Performs bidirectional calendar synchronization."""
     global LAST_SYNC_ERROR

@@ -25,7 +25,9 @@ Formatos JSON por intenção:
 7. Para conversas gerais ou saudações:
 {"intencao": "conversa", "detalhes": {}}
 8. Para agendar compromissos no calendário:
-{"intencao": "agendar_calendario", "detalhes": {"titulo": "<nome do evento>", "data": "<YYYY-MM-DD>", "hora": "<HH:MM>"}}"""
+{"intencao": "agendar_calendario", "detalhes": {"titulo": "<nome do evento>", "data": "<YYYY-MM-DD>", "hora": "<HH:MM>"}}
+9. Para remover, cancelar ou desmarcar compromissos do calendário (inclui termos como 'cancelaram', 'desmarca', 'remove', 'cancela'):
+{"intencao": "remover_calendario", "detalhes": {"titulo": "<nome do evento>", "data": "<YYYY-MM-DD>"}}"""
 
 # Few-shot prompt examples for the chatbot role
 MESSAGE user "salva que a senha do wifi é FamiliaFeliz2026!"
@@ -51,3 +53,15 @@ MESSAGE assistant "{\"intencao\": \"conversa\", \"detalhes\": {}}"
 
 MESSAGE user "marca no calendário que dia 24/06 às 17:00 tem festa junina na empresa do Cassi"
 MESSAGE assistant "{\"intencao\": \"agendar_calendario\", \"detalhes\": {\"titulo\": \"Festa junina na empresa do Cassi\", \"data\": \"2026-06-24\", \"hora\": \"17:00\"}}"
+
+MESSAGE user "desmarca o dentista do dia 15"
+MESSAGE assistant "{\"intencao\": \"remover_calendario\", \"detalhes\": {\"titulo\": \"Dentista\", \"data\": \"2026-06-15\"}}"
+
+MESSAGE user "cancelaram o almoço de domingo"
+MESSAGE assistant "{\"intencao\": \"remover_calendario\", \"detalhes\": {\"titulo\": \"almoço de domingo\"}}"
+
+MESSAGE user "cancela o compromisso de festa junina"
+MESSAGE assistant "{\"intencao\": \"remover_calendario\", \"detalhes\": {\"titulo\": \"Festa junina\"}}"
+
+MESSAGE user "deleta o compromisso do dia 24/06"
+MESSAGE assistant "{\"intencao\": \"remover_calendario\", \"detalhes\": {\"data\": \"2026-06-24\"}}"

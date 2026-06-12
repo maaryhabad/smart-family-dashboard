@@ -507,6 +507,10 @@ function openFeedbackModal(userMsg) {
             detailsLabel.textContent = "Itens a manter na lista (Deixe vazio para limpar tudo):";
             detailsInput.placeholder = "Ex: Refrigerante";
             document.getElementById('feedback-items-group').style.display = 'block';
+        } else if (intent === 'remover_calendario') {
+            detailsLabel.textContent = "Título do compromisso a desmarcar (ou data):";
+            detailsInput.placeholder = "Ex: Festa junina ou 2026-06-24";
+            document.getElementById('feedback-items-group').style.display = 'block';
         } else {
             document.getElementById('feedback-items-group').style.display = 'none';
         }
@@ -545,6 +549,7 @@ async function handleSaveFeedback(e) {
             showToast("Feedback enviado! A ação foi corrigida e a IA está se readequando.", "success");
             closeFeedbackModal();
             fetchVaultMemories();
+            fetchCalendarData();
         } else {
             showToast(`Erro ao enviar feedback: ${data.error}`, "warning");
         }

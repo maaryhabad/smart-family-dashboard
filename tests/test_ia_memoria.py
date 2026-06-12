@@ -187,6 +187,23 @@ class TestDatabaseModule(unittest.TestCase):
     def test_save_and_get_events(self):
         init_db(TEST_DB_PATH)
         
+        # Seed events manually since default seeding is disabled
+        conn = sqlite3.connect(TEST_DB_PATH)
+        cursor = conn.cursor()
+        initial_events = [
+            ("Almoço de Domingo na Vó", "2026-06-14", "12:30", "Família", "#5f27cd", "Familiar"),
+            ("Dentista Mariana", "2026-06-15", "14:00", "Mariana", "#00d2d3", "Saúde"),
+            ("Reunião de Condomínio", "2026-06-17", "20:00", "Rodrigo", "#ff9f43", "Compromisso"),
+            ("Vacina do Pipoca (Pet)", "2026-06-20", "09:00", "Família", "#54a0ff", "Pet"),
+            ("Aniversário do Lucas", "2026-06-25", "18:00", "Lucas", "#ff4d4d", "Familiar")
+        ]
+        cursor.executemany(
+            "INSERT INTO eventos (titulo, data, hora, responsavel, cor, categoria) VALUES (?, ?, ?, ?, ?, ?)",
+            initial_events
+        )
+        conn.commit()
+        conn.close()
+        
         # 1. Test Seeded Events
         events = get_all_events(TEST_DB_PATH)
         self.assertEqual(len(events), 5) # Seeds have 5 events
@@ -398,6 +415,45 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertNotIn("Leite", m_list["conteudo"])
         self.assertIn("Manteiga", m_list["conteudo"])
         self.assertIn("Pão", m_list["conteudo"])
+
+    @patch('threading.Thread', new=MockThread)
+    @patch('subprocess.run')
+    def test_feedback_route_remover_calendario(self, mock_subproc):
+        # 1. Save an event first
+        event_id = save_event(
+            titulo="Consulta Dentista",
+            data="2026-06-15",
+            hora="14:00",
+            responsavel="Família",
+            cor="#5f27cd",
+            categoria="Familiar",
+            db_path=TEST_DB_PATH
+        )
+        
+        # 2. Post feedback correction to remover_calendario
+        response = self.client.post('/api/ia-memoria/feedback', json={
+            "message": "desmarca a consulta do dia 15",
+            "correct_intent": "remover_calendario",
+            "details": "Consulta Dentista, 15/06"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["success"])
+        
+        # 3. Verify event was deleted from DB
+        events = get_all_events(TEST_DB_PATH)
+        self.assertNotIn(event_id, [e["id"] for e in events])
+        
+        # 4. Verify feedback file was updated
+        feedback_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'modules', 'training', 'feedback.json')
+        self.assertTrue(os.path.exists(feedback_file))
+        with open(feedback_file, 'r', encoding='utf-8') as f:
+            feedbacks = json.load(f)
+        
+        target_fb = next(fb for fb in feedbacks if fb.get("user") == "desmarca a consulta do dia 15")
+        assistant_json = json.loads(target_fb["assistant"])
+        self.assertEqual(assistant_json["intencao"], "remover_calendario")
+        self.assertEqual(assistant_json["detalhes"]["titulo"], "Consulta Dentista")
+        self.assertEqual(assistant_json["detalhes"]["data"], "2026-06-15")
 
 
 
@@ -648,6 +704,23 @@ class TestGoogleCalendarSync(unittest.TestCase):
         except PermissionError:
             pass
         init_db(TEST_DB_PATH)
+        
+        # Seed events manually since default seeding is disabled
+        conn = sqlite3.connect(TEST_DB_PATH)
+        cursor = conn.cursor()
+        initial_events = [
+            ("Almoço de Domingo na Vó", "2026-06-14", "12:30", "Família", "#5f27cd", "Familiar"),
+            ("Dentista Mariana", "2026-06-15", "14:00", "Mariana", "#00d2d3", "Saúde"),
+            ("Reunião de Condomínio", "2026-06-17", "20:00", "Rodrigo", "#ff9f43", "Compromisso"),
+            ("Vacina do Pipoca (Pet)", "2026-06-20", "09:00", "Família", "#54a0ff", "Pet"),
+            ("Aniversário do Lucas", "2026-06-25", "18:00", "Lucas", "#ff4d4d", "Familiar")
+        ]
+        cursor.executemany(
+            "INSERT INTO eventos (titulo, data, hora, responsavel, cor, categoria) VALUES (?, ?, ?, ?, ?, ?)",
+            initial_events
+        )
+        conn.commit()
+        conn.close()
 
     def tearDown(self):
         import gc

@@ -65,23 +65,8 @@ def init_db(db_path=None):
         print("Banco de dados modular inicializado e populado com memórias padrão!")
         
     # Check if empty to seed initial calendar events
-    cursor.execute("SELECT COUNT(*) FROM eventos")
-    count_eventos = cursor.fetchone()[0]
-    
-    if count_eventos == 0:
-        initial_events = [
-            ("Almoço de Domingo na Vó", "2026-06-14", "12:30", "Família", "#5f27cd", "Familiar"),
-            ("Dentista Mariana", "2026-06-15", "14:00", "Mariana", "#00d2d3", "Saúde"),
-            ("Reunião de Condomínio", "2026-06-17", "20:00", "Rodrigo", "#ff9f43", "Compromisso"),
-            ("Vacina do Pipoca (Pet)", "2026-06-20", "09:00", "Família", "#54a0ff", "Pet"),
-            ("Aniversário do Lucas", "2026-06-25", "18:00", "Lucas", "#ff4d4d", "Familiar")
-        ]
-        cursor.executemany(
-            "INSERT INTO eventos (titulo, data, hora, responsavel, cor, categoria) VALUES (?, ?, ?, ?, ?, ?)",
-            initial_events
-        )
-        conn.commit()
-        print("Tabela de eventos inicializada e populada com compromissos padrão!")
+    # Disabled default calendar event seeding to prevent polluting real Google Calendars
+    pass
         
     conn.close()
 

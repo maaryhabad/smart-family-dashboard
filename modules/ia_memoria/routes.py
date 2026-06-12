@@ -135,6 +135,65 @@ def ia_chat():
                     f"💡 *Sincronizando com o Google Calendar em background...*"
                 )
                 is_ollama_parsed = True
+            elif intent == "remover_calendario":
+                event_title = detalhes.get("titulo")
+                event_date = detalhes.get("data")
+                
+                if not event_title and not event_date:
+                    reply_text = "🤖 Para remover um compromisso, por favor informe o título ou a data dele!"
+                    is_ollama_parsed = True
+                else:
+                    events = get_all_events()
+                    matched_events = []
+                    for e in events:
+                        title_match = False
+                        date_match = False
+                        if event_title and event_title.lower().strip() in e['titulo'].lower().strip():
+                            title_match = True
+                        if event_date and e['data'] == event_date:
+                            date_match = True
+                            
+                        if event_title and event_date:
+                            if title_match and date_match:
+                                matched_events.append(e)
+                        elif event_title:
+                            if title_match:
+                                matched_events.append(e)
+                        elif event_date:
+                            if date_match:
+                                matched_events.append(e)
+                                
+                    if not matched_events:
+                        query_desc = f"'{event_title}'" if event_title else ""
+                        if event_date:
+                            try:
+                                parts = event_date.split("-")
+                                formatted_qdate = f"{parts[2]}/{parts[1]}/{parts[0]}"
+                            except Exception:
+                                formatted_qdate = event_date
+                            query_desc += f" no dia {formatted_qdate}" if query_desc else f"no dia {formatted_qdate}"
+                        reply_text = f"🤖 Não encontrei nenhum compromisso sobre {query_desc} no calendário."
+                        is_ollama_parsed = True
+                    else:
+                        deleted_names = []
+                        for me in matched_events:
+                            delete_event(me['id'])
+                            deleted_names.append(f"\"{me['titulo']}\"")
+                            g_id = me.get('google_event_id')
+                            if g_id:
+                                try:
+                                    from .google_calendar import delete_event_from_google_background
+                                    delete_event_from_google_background(g_id)
+                                except Exception as ex:
+                                    print(f"Google Calendar background delete trigger failed: {ex}")
+                                    
+                        deleted_str = ", ".join(deleted_names)
+                        reply_text = (
+                            f"📅 **Compromisso(s) desmarcado(s) com sucesso!**<br><br>"
+                            f"🗑️ **Removido(s):** {deleted_str}<br><br>"
+                            f"💡 *Sincronizando exclusão com o Google Calendar em background...*"
+                        )
+                        is_ollama_parsed = True
         else:
             # Ollama offline or returned invalid response
             reply_text = (
@@ -571,6 +630,61 @@ def feedback_retrain():
                 chave = " ".join(tokens[:3]) if tokens else "geral"
                 save_memory(category, chave, details)
                 
+        elif correct_intent == "remover_calendario":
+            import re
+            event_title = None
+            event_date = None
+            
+            m_iso = re.search(r'\b(\d{4})-(\d{2})-(\d{2})\b', details)
+            m_br = re.search(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', details)
+            
+            if m_iso:
+                event_date = m_iso.group(0)
+                remaining = details.replace(event_date, "").strip(", ").strip()
+                if remaining:
+                    event_title = remaining
+            elif m_br:
+                day = m_br.group(1)
+                month = m_br.group(2)
+                year = m_br.group(3) if m_br.group(3) else "2026"
+                event_date = f"{year}-{month}-{day}"
+                remaining = details.replace(m_br.group(0), "").strip(", ").strip()
+                if remaining:
+                    event_title = remaining
+            else:
+                event_title = details
+                
+            if event_title or event_date:
+                events = get_all_events()
+                matched_events = []
+                for e in events:
+                    title_match = False
+                    date_match = False
+                    if event_title and event_title.lower().strip() in e['titulo'].lower().strip():
+                        title_match = True
+                    if event_date and e['data'] == event_date:
+                        date_match = True
+                        
+                    if event_title and event_date:
+                        if title_match and date_match:
+                            matched_events.append(e)
+                    elif event_title:
+                        if title_match:
+                            matched_events.append(e)
+                    elif event_date:
+                        if date_match:
+                            matched_events.append(e)
+                            
+                for me in matched_events:
+                    delete_event(me['id'])
+                    g_id = me.get('google_event_id')
+                    if g_id:
+                        try:
+                            from .google_calendar import delete_event_from_google_background
+                            delete_event_from_google_background(g_id)
+                        except Exception as ex:
+                            print(f"Google Calendar background delete trigger failed: {ex}")
+                
     except Exception as e:
         print(f"Error updating database during feedback execution: {e}")
         return jsonify({"success": False, "error": f"Erro ao atualizar banco de dados: {str(e)}"}), 500
@@ -608,6 +722,36 @@ def feedback_retrain():
             assistant_payload["detalhes"] = {"manter_itens": items}
         elif correct_intent == "conversa":
             assistant_payload["detalhes"] = {}
+        elif correct_intent == "remover_calendario":
+            import re
+            event_title = None
+            event_date = None
+            
+            m_iso = re.search(r'\b(\d{4})-(\d{2})-(\d{2})\b', details)
+            m_br = re.search(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', details)
+            
+            if m_iso:
+                event_date = m_iso.group(0)
+                remaining = details.replace(event_date, "").strip(", ").strip()
+                if remaining:
+                    event_title = remaining
+            elif m_br:
+                day = m_br.group(1)
+                month = m_br.group(2)
+                year = m_br.group(3) if m_br.group(3) else "2026"
+                event_date = f"{year}-{month}-{day}"
+                remaining = details.replace(m_br.group(0), "").strip(", ").strip()
+                if remaining:
+                    event_title = remaining
+            else:
+                event_title = details
+                
+            detalhes_payload = {}
+            if event_title:
+                detalhes_payload["titulo"] = event_title
+            if event_date:
+                detalhes_payload["data"] = event_date
+            assistant_payload["detalhes"] = detalhes_payload
             
         assistant_str = json.dumps(assistant_payload)
         
