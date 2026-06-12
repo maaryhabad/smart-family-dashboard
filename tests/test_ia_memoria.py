@@ -10,7 +10,8 @@ from modules.ia_memoria.nlp_engine import (
 )
 from app import app
 from modules.ia_memoria.database import (
-    init_db, save_memory, get_all_memories, delete_memory, get_db_connection, update_memory
+    init_db, save_memory, get_all_memories, delete_memory, get_db_connection, update_memory,
+    get_all_events, save_event, delete_event, update_event_google_id, update_event
 )
 
 TEST_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_database.db')
@@ -182,6 +183,61 @@ class TestDatabaseModule(unittest.TestCase):
         self.assertEqual(updated["categoria"], "Senhas")
         self.assertEqual(updated["chave"], "chave nova")
         self.assertEqual(updated["conteudo"], "Nova senha secreta")
+
+    def test_save_and_get_events(self):
+        init_db(TEST_DB_PATH)
+        
+        # 1. Test Seeded Events
+        events = get_all_events(TEST_DB_PATH)
+        self.assertEqual(len(events), 5) # Seeds have 5 events
+        
+        # 2. Test Save Event
+        event_id = save_event(
+            titulo="Festa Junina",
+            data="2026-06-24",
+            hora="17:00",
+            responsavel="Família",
+            cor="#5f27cd",
+            categoria="Familiar",
+            db_path=TEST_DB_PATH
+        )
+        
+        events2 = get_all_events(TEST_DB_PATH)
+        self.assertEqual(len(events2), 6)
+        
+        added = next(e for e in events2 if e["id"] == event_id)
+        self.assertEqual(added["titulo"], "Festa Junina")
+        self.assertEqual(added["data"], "2026-06-24")
+        self.assertEqual(added["hora"], "17:00")
+        
+        # 3. Test Update Google ID
+        update_event_google_id(event_id, "g_event_123", TEST_DB_PATH)
+        events3 = get_all_events(TEST_DB_PATH)
+        updated = next(e for e in events3 if e["id"] == event_id)
+        self.assertEqual(updated["google_event_id"], "g_event_123")
+        
+        # 3b. Test Update Event Details
+        update_event(
+            event_id=event_id,
+            titulo="Festa Junina do Cassi",
+            data="2026-06-24",
+            hora="18:30",
+            responsavel="Família",
+            cor="#ff0000",
+            categoria="Familiar",
+            db_path=TEST_DB_PATH
+        )
+        events3_details = get_all_events(TEST_DB_PATH)
+        updated_details = next(e for e in events3_details if e["id"] == event_id)
+        self.assertEqual(updated_details["titulo"], "Festa Junina do Cassi")
+        self.assertEqual(updated_details["hora"], "18:30")
+        self.assertEqual(updated_details["cor"], "#ff0000")
+        
+        # 4. Test Delete Event
+        delete_event(event_id, TEST_DB_PATH)
+        events_after = get_all_events(TEST_DB_PATH)
+        self.assertEqual(len(events_after), 5)
+        self.assertNotIn(event_id, [e["id"] for e in events_after])
 
 
 class MockThread:
@@ -518,6 +574,30 @@ class TestOllamaIntegration(unittest.TestCase):
         self.assertIn("Sou o assistente virtual", data["reply"])
 
     @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    def test_chat_ollama_agendar_calendario(self, mock_ollama):
+        mock_ollama.return_value = (True, {
+            "intencao": "agendar_calendario",
+            "detalhes": {
+                "titulo": "Festa junina na empresa do Cassi",
+                "data": "2026-06-24",
+                "hora": "17:00"
+            }
+        })
+        
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "marca no calendário que dia 24/06 às 17:00 tem festa junina na empresa do Cassi"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("Compromisso agendado com sucesso", data["reply"])
+        self.assertIn("Festa junina na empresa do Cassi", data["reply"])
+        self.assertIn("24/06/2026", data["reply"])
+        self.assertIn("17:00", data["reply"])
+        
+        events = get_all_events(TEST_DB_PATH)
+        self.assertTrue(any(e["titulo"] == "Festa junina na empresa do Cassi" for e in events))
+
+    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
     def test_chat_ollama_offline_response(self, mock_ollama):
         mock_ollama.return_value = (False, None)
         
@@ -556,6 +636,104 @@ class TestOllamaIntegration(unittest.TestCase):
         ok, res = parse_intent_with_ollama("teste mensagem")
         self.assertFalse(ok)
         self.assertIsNone(res)
+
+
+class TestGoogleCalendarSync(unittest.TestCase):
+    def setUp(self):
+        import gc
+        gc.collect()
+        try:
+            if os.path.exists(TEST_DB_PATH):
+                os.remove(TEST_DB_PATH)
+        except PermissionError:
+            pass
+        init_db(TEST_DB_PATH)
+
+    def tearDown(self):
+        import gc
+        gc.collect()
+        try:
+            if os.path.exists(TEST_DB_PATH):
+                os.remove(TEST_DB_PATH)
+        except PermissionError:
+            pass
+
+    @patch('os.path.exists')
+    def test_sync_calendars_no_credentials(self, mock_exists):
+        mock_exists.return_value = False
+        from modules.ia_memoria.google_calendar import sync_calendars
+        success = sync_calendars(db_path=TEST_DB_PATH)
+        self.assertFalse(success)
+
+    @patch('os.path.exists')
+    @patch('modules.ia_memoria.google_calendar.get_calendar_service')
+    def test_sync_calendars_with_mock_google(self, mock_get_service, mock_exists):
+        mock_exists.return_value = True
+        
+        # Mock Google Calendar API service
+        mock_service = MagicMock()
+        mock_get_service.return_value = mock_service
+        
+        # Configure service.events().list().execute() to return a list of mock events
+        # We will mock two events:
+        # 1. An existing event that needs to be updated (we'll associate with "Almoço de Domingo na Vó" by adding a google ID beforehand)
+        # 2. A new event from Google Calendar that needs to be created locally
+        # 3. We will NOT return the "Dentista Mariana" event (which has google_event_id), to test its deletion
+        
+        # Set up a local event with google_event_id first
+        events = get_all_events(TEST_DB_PATH)
+        almoco_id = next(e for e in events if e["titulo"] == "Almoço de Domingo na Vó")["id"]
+        dentista_id = next(e for e in events if e["titulo"] == "Dentista Mariana")["id"]
+        
+        update_event_google_id(almoco_id, "g_almoco_123", TEST_DB_PATH)
+        update_event_google_id(dentista_id, "g_dentista_999", TEST_DB_PATH)
+        
+        # Remote events returned by mock API:
+        # Event 1: updated almoco time
+        # Event 2: new event "Reunião de Planejamento"
+        mock_service.events().list().execute.return_value = {
+            "items": [
+                {
+                    "id": "g_almoco_123",
+                    "summary": "Almoço de Domingo na Vó",
+                    "start": {
+                        "dateTime": "2026-06-14T13:00:00-03:00" # changed from 12:30
+                    }
+                },
+                {
+                    "id": "g_nova_reuniao_456",
+                    "summary": "Reunião de Planejamento",
+                    "start": {
+                        "dateTime": "2026-06-16T15:30:00-03:00"
+                    }
+                }
+            ]
+        }
+        
+        # Mock service.events().insert().execute() for local push
+        # In our database, all other 3 local events don't have a google_event_id, so they will be pushed
+        mock_service.events().insert().execute.return_value = {
+            "id": "g_pushed_event_xyz"
+        }
+        
+        from modules.ia_memoria.google_calendar import sync_calendars
+        success = sync_calendars(db_path=TEST_DB_PATH)
+        
+        self.assertTrue(success)
+        
+        # Verify almoco details were updated to 13:00
+        events_after = get_all_events(TEST_DB_PATH)
+        almoco_after = next(e for e in events_after if e["id"] == almoco_id)
+        self.assertEqual(almoco_after["hora"], "13:00")
+        
+        # Verify new event was inserted
+        self.assertTrue(any(e["google_event_id"] == "g_nova_reuniao_456" for e in events_after))
+        new_ev = next(e for e in events_after if e["google_event_id"] == "g_nova_reuniao_456")
+        self.assertEqual(new_ev["titulo"], "Reunião de Planejamento")
+        self.assertEqual(new_ev["hora"], "15:30")
+        
+        # Verify that "Dentista Mariana" (g_dentista_999) was DELETED because it fell in the sync range but wasn't in active remote events
+        self.assertFalse(any(e["id"] == dentista_id for e in events_after))
 
 
 if __name__ == '__main__':

@@ -23,7 +23,9 @@ Formatos JSON por intenção:
 6. Para comandos compostos (adicionar e remover na mesma frase):
 {"intencao": "composto_lista", "detalhes": {"adicionar_itens": ["Item A"], "remover_itens": ["Item B"]}}
 7. Para conversas gerais ou saudações:
-{"intencao": "conversa", "detalhes": {}}"""
+{"intencao": "conversa", "detalhes": {}}
+8. Para agendar compromissos no calendário:
+{"intencao": "agendar_calendario", "detalhes": {"titulo": "<nome do evento>", "data": "<YYYY-MM-DD>", "hora": "<HH:MM>"}}"""
 
 # Few-shot prompt examples for the chatbot role
 MESSAGE user "salva que a senha do wifi é FamiliaFeliz2026!"
@@ -46,3 +48,6 @@ MESSAGE assistant "{\"intencao\": \"composto_lista\", \"detalhes\": {\"adicionar
 
 MESSAGE user "ola boa tarde tudo bem?"
 MESSAGE assistant "{\"intencao\": \"conversa\", \"detalhes\": {}}"
+
+MESSAGE user "marca no calendário que dia 24/06 às 17:00 tem festa junina na empresa do Cassi"
+MESSAGE assistant "{\"intencao\": \"agendar_calendario\", \"detalhes\": {\"titulo\": \"Festa junina na empresa do Cassi\", \"data\": \"2026-06-24\", \"hora\": \"17:00\"}}"

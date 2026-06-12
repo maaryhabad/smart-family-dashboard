@@ -1,5 +1,8 @@
 import os
 import random
+from modules.ia_memoria.google_calendar import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, jsonify, request
 
 from modules.ia_memoria.database import init_db
@@ -103,7 +106,48 @@ def get_financas():
 
 @app.route('/api/calendario')
 def get_calendario():
-    return jsonify(CALENDAR_EVENTS)
+    from modules.ia_memoria.database import get_all_events
+    events = get_all_events()
+    mapped_events = []
+    for e in events:
+        mapped_events.append({
+            "id": e.get("id"),
+            "title": e.get("titulo"),
+            "date": e.get("data"),
+            "time": e.get("hora"),
+            "user": e.get("responsavel"),
+            "color": e.get("cor"),
+            "category": e.get("categoria"),
+            "google_event_id": e.get("google_event_id")
+        })
+    return jsonify(mapped_events)
+
+@app.route('/api/calendario/sync', methods=['POST'])
+def sync_calendario_route():
+    from modules.ia_memoria.google_calendar import sync_calendars
+    import os
+    
+    # Check if credentials exist
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    credentials_path = os.path.join(root_dir, 'credentials.json')
+    if not os.path.exists(credentials_path):
+        return jsonify({
+            "success": False, 
+            "error": "Arquivo 'credentials.json' não encontrado na raiz do projeto. Por favor, configure as credenciais da conta de serviço para sincronizar."
+        }), 400
+        
+    from modules.ia_memoria.google_calendar import LAST_SYNC_ERROR
+    success = sync_calendars()
+    if success:
+        return jsonify({"success": True, "message": "Calendário sincronizado com o Google com sucesso!"})
+    else:
+        err_msg = LAST_SYNC_ERROR or "Erro desconhecido durante a sincronização."
+        if "Google Calendar API has not been used" in err_msg or "accessNotConfigured" in err_msg:
+            err_msg = (
+                "A API do Google Calendar está desativada no seu projeto do Google Cloud. "
+                "Ative-a clicando no link: https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview?project=281421242488"
+            )
+        return jsonify({"success": False, "error": err_msg}), 500
 
 @app.route('/api/todo-gamer')
 def get_todo_gamer():

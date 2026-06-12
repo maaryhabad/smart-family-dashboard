@@ -3,6 +3,7 @@ import math
 import urllib.request
 import json
 import time
+import datetime
 
 # Basic Portuguese stop words to ignore during tokenization/vectorization
 PORTUGUESE_STOPWORDS = {
@@ -265,9 +266,11 @@ def parse_intent_with_ollama(message):
         # Fail fast if Ollama is offline
         return False, None
     
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
     system_prompt = (
-        "Você é o NLU do sistema DashFamília. Responda ESTRITAMENTE com um objeto JSON válido.\n"
-        "Não escreva nada além do JSON (sem markdown, sem explicações).\n\n"
+        f"Você é o NLU do sistema DashFamília. Responda ESTRITAMENTE com um objeto JSON válido.\n"
+        f"Não escreva nada além do JSON (sem markdown, sem explicações).\n"
+        f"Hoje é {today_str}. Utilize este dia/ano para resolver datas relativas ou parciais (ex: 'dia 24/06' ou 'amanhã').\n\n"
         "Formatos de resposta por intenção:\n"
         "1. Para salvar informações:\n"
         "{\"intencao\": \"salvar\", \"detalhes\": {\"salvar_conteudo\": \"A senha do portão é 1234\"}}\n"
@@ -282,7 +285,9 @@ def parse_intent_with_ollama(message):
         "6. Para comandos compostos (adicionar e remover na mesma frase):\n"
         "{\"intencao\": \"composto_lista\", \"detalhes\": {\"adicionar_itens\": [\"Chá\"], \"remover_itens\": [\"Arroz\", \"Feijão\"]}}\n"
         "7. Para conversas gerais ou saudações:\n"
-        "{\"intencao\": \"conversa\", \"detalhes\": {}}"
+        "{\"intencao\": \"conversa\", \"detalhes\": {}}\n"
+        "8. Para agendar compromissos no calendário:\n"
+        "{\"intencao\": \"agendar_calendario\", \"detalhes\": {\"titulo\": \"<nome do evento>\", \"data\": \"<YYYY-MM-DD>\", \"hora\": \"<HH:MM>\"}}"
     )
     
     payload = {

@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupGamerListeners();
     setupVaultListeners();
     setupFeedbackListeners();
+    setupCalendarListeners();
     setupVoiceRecognition('btn-chat-mic', 'chat-input');
     setupVoiceRecognition('btn-modal-mic', 'edit-mem-content');
     
@@ -948,6 +949,44 @@ function renderEventsList() {
             </div>
         `;
         listContainer.appendChild(card);
+    });
+}
+
+function setupCalendarListeners() {
+    const syncBtn = document.getElementById('cal-sync-btn');
+    if (!syncBtn) return;
+    
+    syncBtn.addEventListener('click', async () => {
+        const symbol = document.getElementById('sync-icon-symbol');
+        const text = document.getElementById('sync-btn-text');
+        
+        // Visual loading state
+        if (symbol) symbol.classList.add('spin');
+        if (text) text.textContent = 'Sincronizando...';
+        syncBtn.disabled = true;
+        
+        try {
+            const res = await fetch('/api/calendario/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+                showToast("📅 Sincronização concluída com o Google Agenda!", "success");
+                // Reload events
+                await fetchCalendarData();
+            } else {
+                showToast(`⚠️ Sincronização: ${data.error || 'Erro desconhecido'}`, "warning");
+            }
+        } catch (err) {
+            console.error("Erro de sincronização:", err);
+            showToast("⚠️ Erro de rede ao sincronizar com o Google Agenda.", "warning");
+        } finally {
+            if (symbol) symbol.classList.remove('spin');
+            if (text) text.textContent = 'Sincronizar Google';
+            syncBtn.disabled = false;
+        }
     });
 }
 

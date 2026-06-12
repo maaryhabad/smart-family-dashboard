@@ -284,9 +284,14 @@
                     <div class="calendar-layout-grid">
                         <div class="glass-panel calendar-main">
                             <div class="calendar-nav-header">
-                                <button class="btn btn-secondary btn-sm" id="cal-prev-btn">&lt; Anterior</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-secondary btn-sm" id="cal-prev-btn">&lt; Anterior</button>
+                                    <button class="btn btn-secondary btn-sm" id="cal-next-btn">Próximo &gt;</button>
+                                </div>
                                 <h3 id="cal-month-title">Junho 2026</h3>
-                                <button class="btn btn-secondary btn-sm" id="cal-next-btn">Próximo &gt;</button>
+                                <button class="btn btn-primary btn-sm" id="cal-sync-btn" style="background: #10ac84; border: none; display: flex; align-items: center; gap: 6px; color: white;">
+                                    <span id="sync-icon-symbol">🔄</span> <span id="sync-btn-text">Sincronizar Google</span>
+                                </button>
                             </div>
                             
                             <!-- Calendar Grid -->

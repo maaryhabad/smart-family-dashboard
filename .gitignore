@@ -26,3 +26,7 @@ modules/training/Modelfile
 .DS_Store
 Thumbs.db
 *.log
+
+# Credentials & Secrets
+credentials.json
+.env

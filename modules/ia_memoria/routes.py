@@ -3,7 +3,10 @@ import os
 import json
 import threading
 import subprocess
-from .database import get_all_memories, save_memory, delete_memory, update_memory
+from .database import (
+    get_all_memories, save_memory, delete_memory, update_memory,
+    get_all_events, save_event, delete_event, update_event_google_id
+)
 from .nlp_engine import (
     search_best_memory, classify_category, tokenize, 
     format_list_to_bullets, parse_intent_with_ollama,
@@ -92,6 +95,44 @@ def ia_chat():
                 reply_text = (
                     "Olá! Sou o assistente virtual do DashFamília. Como posso ajudar você e sua família hoje? "
                     "Posso lembrar de senhas, contatos, ferramentas ou gerenciar sua lista de compras!"
+                )
+                is_ollama_parsed = True
+            elif intent == "agendar_calendario":
+                event_title = detalhes.get("titulo") or "Compromisso sem título"
+                event_date = detalhes.get("data")
+                event_time = detalhes.get("hora") or "00:00"
+                
+                if not event_date:
+                    import datetime
+                    event_date = datetime.date.today().strftime("%Y-%m-%d")
+                    
+                event_id = save_event(
+                    titulo=event_title,
+                    data=event_date,
+                    hora=event_time,
+                    responsavel='Família',
+                    cor='#5f27cd',
+                    categoria='Familiar'
+                )
+                
+                try:
+                    from .google_calendar import push_event_to_google_background
+                    push_event_to_google_background(event_id, event_title, event_date, event_time)
+                except Exception as ex:
+                    print(f"Google Calendar background sync trigger failed: {ex}")
+                
+                try:
+                    parts = event_date.split("-")
+                    formatted_date = f"{parts[2]}/{parts[1]}/{parts[0]}"
+                except Exception:
+                    formatted_date = event_date
+                    
+                reply_text = (
+                    f"📅 **Compromisso agendado com sucesso!**<br><br>"
+                    f"📌 **Evento:** {event_title}<br>"
+                    f"📅 **Data:** {formatted_date}<br>"
+                    f"🕒 **Hora:** {event_time}<br><br>"
+                    f"💡 *Sincronizando com o Google Calendar em background...*"
                 )
                 is_ollama_parsed = True
         else:
