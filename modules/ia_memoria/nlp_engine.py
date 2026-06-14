@@ -219,12 +219,12 @@ _cached_model = None
 _last_check_time = 0
 _ollama_online = True
 
-def check_ollama_status():
+def check_ollama_status(force=False):
     """Checks if Ollama is online, caching the status for 5 seconds to avoid timeout delays."""
     global _ollama_online, _last_check_time, _cached_model
     current_time = time.time()
     
-    if current_time - _last_check_time < 5.0:
+    if not force and (current_time - _last_check_time < 5.0):
         return _ollama_online
         
     _last_check_time = current_time
@@ -247,6 +247,35 @@ def check_ollama_status():
         _cached_model = None
         return False
 
+def ensure_ollama_running():
+    """Attempts to start Ollama if it is offline."""
+    import subprocess
+    import os
+    if check_ollama_status(force=True):
+        return True
+        
+    print("Ollama is offline. Attempting to auto-start local Ollama service...")
+    try:
+        creationflags = 0
+        if os.name == 'nt':
+            creationflags = 0x08000000  # CREATE_NO_WINDOW
+            
+        subprocess.Popen(
+            ["ollama", "serve"], 
+            creationflags=creationflags, 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL
+        )
+        # Wait up to 5 seconds for it to start
+        for _ in range(5):
+            time.sleep(1.0)
+            if check_ollama_status(force=True):
+                print("Ollama started successfully via auto-start.")
+                return True
+    except Exception as e:
+        print(f"Failed to auto-start Ollama: {e}")
+    return False
+
 def get_available_ollama_model():
     """Queries Ollama for available models or returns cached model. Returns None if offline."""
     global _cached_model
@@ -263,8 +292,12 @@ def parse_intent_with_ollama(message):
     """
     model = get_available_ollama_model()
     if not model:
-        # Fail fast if Ollama is offline
-        return False, None
+        # Try to auto-start Ollama
+        ensure_ollama_running()
+        model = get_available_ollama_model()
+        if not model:
+            # Fail fast if Ollama is still offline
+            return False, None
     
     today_str = datetime.date.today().strftime("%Y-%m-%d")
     system_prompt = (
@@ -318,7 +351,7 @@ def parse_intent_with_ollama(message):
             headers={'Content-Type': 'application/json'},
             method='POST'
         )
-        with urllib.request.urlopen(req, timeout=15.0) as response:
+        with urllib.request.urlopen(req, timeout=90.0) as response:
             res_data = response.read().decode('utf-8')
             res_json = json.loads(res_data)
             
