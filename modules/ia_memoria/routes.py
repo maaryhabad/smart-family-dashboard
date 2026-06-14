@@ -19,12 +19,221 @@ from .nlp_engine import (
 ia_memoria_bp = Blueprint('ia_memoria', __name__)
 is_retraining_model = False
 
+def extract_date_from_text(text):
+    import re
+    import datetime
+    text_lower = text.lower().strip()
+    
+    # 1. Relative terms
+    if 'amanhã' in text_lower or 'amanha' in text_lower:
+        return (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    if 'hoje' in text_lower:
+        return datetime.date.today().strftime("%Y-%m-%d")
+        
+    # 2. ISO format YYYY-MM-DD
+    m_iso = re.search(r'\b(\d{4})-(\d{2})-(\d{2})\b', text)
+    if m_iso:
+        return m_iso.group(0)
+        
+    # 3. Brazilian format DD/MM/YYYY or DD/MM
+    m_br = re.search(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', text)
+    if m_br:
+        day = m_br.group(1)
+        month = m_br.group(2)
+        year = m_br.group(3) if m_br.group(3) else "2026"  # Mock current year
+        return f"{year}-{month}-{day}"
+        
+    return None
+
+def parse_recipe_details(message):
+    # Convert to lowercase to find keywords, but keep original case for content extraction
+    msg_lower = message.lower()
+    
+    prefixes = [
+        "registrar receita de ", "registrar receita ", "registrar a receita de ", "registrar a receita ",
+        "salvar receita de ", "salvar receita ", "salvar a receita de ", "salvar a receita ",
+        "cadastrar receita de ", "cadastrar receita ", "cadastrar a receita de ", "cadastrar a receita ",
+        "adicionar receita de ", "adicionar receita ", "adicionar a receita de ", "adicionar a receita ",
+        "editar receita de ", "editar receita ", "editar a receita de ", "editar a receita ",
+        "alterar receita de ", "alterar receita ", "alterar a receita de ", "alterar a receita ",
+        "atualizar receita de ", "atualizar receita ", "atualizar a receita de ", "atualizar a receita ",
+        "modificar receita de ", "modificar receita ", "modificar a receita de ", "modificar a receita "
+    ]
+    
+    prefix_found = None
+    for p in prefixes:
+        if msg_lower.startswith(p):
+            prefix_found = p
+            break
+            
+    if not prefix_found:
+        for p in prefixes:
+            idx = msg_lower.find(p)
+            if idx != -1:
+                message = message[idx:]
+                msg_lower = message.lower()
+                prefix_found = p
+                break
+                
+    if not prefix_found:
+        return None
+        
+    after_prefix = message[len(prefix_found):].strip()
+    after_prefix_lower = after_prefix.lower()
+    
+    # End of recipe name is colon, newline or key terms
+    end_idx = len(after_prefix)
+    for sep in [':', '\n', 'ingredientes', 'passo a passo', 'modo de preparo', 'preparo']:
+        idx = after_prefix_lower.find(sep)
+        if idx != -1 and idx < end_idx:
+            end_idx = idx
+            
+    recipe_name = after_prefix[:end_idx].strip()
+    recipe_name = recipe_name.strip(',. ')
+    
+    content_part = after_prefix[end_idx:].strip()
+    while content_part and content_part[0] in [':', ',', '.', ' ', '-', '\n']:
+        content_part = content_part[1:].strip()
+        
+    content_part_lower = content_part.lower()
+    ing_idx = content_part_lower.find('ingredientes')
+    
+    inst_idx = -1
+    for inst_kw in ['passo a passo', 'modo de preparo', 'preparo', 'instrucoes', 'instruções']:
+        idx = content_part_lower.find(inst_kw)
+        if idx != -1:
+            inst_idx = idx
+            break
+            
+    ingredients_text = ""
+    instructions_text = ""
+    
+    if ing_idx != -1 and inst_idx != -1:
+        if ing_idx < inst_idx:
+            ing_section = content_part[ing_idx:inst_idx].strip()
+            inst_section = content_part[inst_idx:].strip()
+        else:
+            inst_section = content_part[inst_idx:ing_idx].strip()
+            ing_section = content_part[ing_idx:].strip()
+            
+        ing_section_lower = ing_section.lower()
+        start_ing = ing_section_lower.find('ingredientes') + len('ingredientes')
+        ingredients_text = ing_section[start_ing:].strip()
+        while ingredients_text and ingredients_text[0] in [':', ',', '.', ' ', '-', '\n']:
+            ingredients_text = ingredients_text[1:].strip()
+            
+        inst_section_lower = inst_section.lower()
+        matched_kw = None
+        for inst_kw in ['passo a passo', 'modo de preparo', 'preparo', 'instrucoes', 'instruções']:
+            if inst_section_lower.startswith(inst_kw):
+                matched_kw = inst_kw
+                break
+        start_inst = len(matched_kw) if matched_kw else 0
+        instructions_text = inst_section[start_inst:].strip()
+        while instructions_text and instructions_text[0] in [':', ',', '.', ' ', '-', '\n']:
+            instructions_text = instructions_text[1:].strip()
+    else:
+        ingredients_text = content_part
+        instructions_text = ""
+        
+    return {
+        'nome': recipe_name,
+        'ingredientes': ingredients_text,
+        'passo_a_passo': instructions_text
+    }
+
+def format_recipe_content(ingredients, instructions):
+    formatted = "Ingredientes:\n"
+    if '\n' in ingredients:
+        items = [i.strip() for i in ingredients.split('\n') if i.strip()]
+    else:
+        items = [i.strip() for i in ingredients.split(',') if i.strip()]
+        
+    for item in items:
+        while item and item[0] in ['-', '*', '•', ' ']:
+            item = item[1:].strip()
+        if item:
+            item = item[0].upper() + item[1:]
+            formatted += f"- {item}\n"
+            
+    if instructions:
+        formatted += "\nPasso a passo:\n"
+        if '\n' in instructions:
+            steps = [s.strip() for s in instructions.split('\n') if s.strip()]
+        else:
+            steps = [s.strip() for s in instructions.split('.') if s.strip()]
+            
+        for idx, step in enumerate(steps):
+            import re
+            step = re.sub(r'^\d+[\.\-\s\)]+', '', step).strip()
+            while step and step[0] in ['-', '*', '•', ' ']:
+                step = step[1:].strip()
+            if step:
+                step = step[0].upper() + step[1:]
+                formatted += f"{idx+1}. {step}\n"
+                
+    return formatted.strip()
+
 def parse_intent_locally(message):
     """
     Fallback local parser using keyword/regex matching.
     Returns (intent, detalhes) or (None, None).
     """
     msg = message.lower().strip()
+    
+    # 0. Wildcard calendar deletion (e.g. "desmarcar todos os compromissos de amanhã")
+    delete_keywords = ['desmarcar', 'cancelar', 'remover', 'deletar', 'limpar', 'excluir', 'apagar', 'desmarca', 'cancela', 'remove', 'deleta', 'limpa', 'exclui', 'apaga']
+    wildcard_keywords = ['todos', 'tudo', 'todas', 'agenda']
+    has_delete = any(kw in msg for kw in delete_keywords)
+    has_wildcard = any(kw in msg for kw in wildcard_keywords)
+    if has_delete and has_wildcard:
+        extracted_date = extract_date_from_text(msg)
+        if extracted_date:
+            return 'remover_calendario', {'titulo': None, 'data': extracted_date}
+            
+    # 0.5. Recipe-related intents
+    # Delete recipe
+    if 'receita' in msg and any(kw in msg for kw in ['deletar', 'excluir', 'apagar', 'remover', 'deleta', 'exclui', 'apaga', 'remove']):
+        del_triggers = [
+            "deletar receita de ", "deletar receita ", "deletar a receita de ", "deletar a receita ",
+            "excluir receita de ", "excluir receita ", "excluir a receita de ", "excluir a receita ",
+            "apagar receita de ", "apagar receita ", "apagar a receita de ", "apagar a receita ",
+            "remover receita de ", "remover receita ", "remover a receita de ", "remover a receita "
+        ]
+        for dt in del_triggers:
+            idx = msg.find(dt)
+            if idx != -1:
+                recipe_name = msg[idx + len(dt):].strip()
+                recipe_name = recipe_name.strip('?. ')
+                if recipe_name:
+                    return 'deletar_receita', {'receita': recipe_name}
+                    
+    # Save/Edit recipe
+    if 'receita' in msg and any(kw in msg for kw in ['salvar', 'registrar', 'cadastrar', 'adicionar', 'editar', 'alterar', 'atualizar', 'modificar']):
+        recipe_details = parse_recipe_details(message)
+        if recipe_details:
+            return 'salvar_receita', recipe_details
+            
+    # Shopping list from recipe (e.g. "Quero fazer panqueca de aveia, o que preciso comprar?")
+    if 'fazer' in msg or 'comprar' in msg or 'receita' in msg:
+        triggers = [
+            "quero fazer ", "vou fazer ", "o que preciso comprar para fazer ", "o que preciso comprar pra fazer ",
+            "o que preciso comprar para ", "o que preciso comprar pra ", "o que comprar para fazer ", "o que comprar pra fazer ",
+            "o que comprar para ", "o que comprar pra ", "ingredientes para fazer ", "ingredientes pra fazer ",
+            "ingredientes para ", "ingredientes pra ", "fazer a receita de ", "fazer receita de ", "fazer a receita ",
+            "fazer receita "
+        ]
+        for t in triggers:
+            idx = msg.find(t)
+            if idx != -1:
+                recipe_name = msg[idx + len(t):].strip()
+                for question_sep in [', o que', ', oq', ' o que', ' oq', '?', ',']:
+                    q_idx = recipe_name.find(question_sep)
+                    if q_idx != -1:
+                        recipe_name = recipe_name[:q_idx].strip()
+                recipe_name = recipe_name.strip('?. ')
+                if recipe_name:
+                    return 'comprar_receita', {'receita': recipe_name}
     
     # 1. Completar tarefa
     complete_keywords = ['completei', 'conclui', 'concluí', 'terminei', 'feita', 'feito', 'marcar como feita', 'concluir', 'terminou', 'concluiu', 'completou']
@@ -52,9 +261,23 @@ def parse_intent_locally(message):
         elif 'pia' in msg or 'brilhar' in msg:
             task_kw = 'pia'
         elif 'lixo' in msg or 'recicla' in msg:
-            task_kw = 'lixo'
-        elif 'aspirar' in msg or 'passar pano' in msg or 'sala' in msg:
-            task_kw = 'aspirar'
+            if 'banheiro' in msg:
+                task_kw = 'lixo do banheiro'
+            else:
+                task_kw = 'lixo'
+        elif 'aspirar' in msg or 'aspirador' in msg:
+            task_kw = 'aspirador'
+        elif 'pano' in msg:
+            task_kw = 'passar pano'
+        elif 'roupa' in msg or 'lavar' in msg:
+            if 'cama' in msg or 'banho' in msg:
+                task_kw = 'lavar roupa'
+                user = 'Mari'
+            elif 'semana' in msg:
+                task_kw = 'lavar roupa'
+                user = 'Cassi'
+            else:
+                task_kw = 'lavar roupa'
         elif 'lençol' in msg or 'toalha' in msg or 'cama' in msg:
             task_kw = 'lençóis'
         elif 'poeira' in msg or 'espanar' in msg or 'espelho' in msg:
@@ -68,11 +291,11 @@ def parse_intent_locally(message):
             
         if task_kw or user:
             if not user and task_kw:
-                if task_kw in ['caixa de areia', 'plantas', 'jantar', 'lixo', 'aspirar']:
+                if task_kw in ['caixa de areia', 'plantas', 'jantar', 'lixo', 'aspirador']:
                     user = 'Cassi'
-                elif task_kw in ['brinquedos', 'mochila', 'água', 'ballet']:
+                elif task_kw in ['brinquedos', 'mochila', 'água', 'ballet', 'lixo do banheiro']:
                     user = 'Isa'
-                elif task_kw in ['pia', 'alimentador', 'lençóis', 'poeira']:
+                elif task_kw in ['pia', 'alimentador', 'lençóis', 'poeira', 'passar pano']:
                     user = 'Mari'
             return 'completar_tarefa', {'usuario': user, 'tarefa': task_kw or msg}
             
@@ -473,6 +696,163 @@ def ia_chat():
                     reply_text = f"📜 **Quadro de Missões Pendentes{user_desc}:**<br><br>"
                     for t in pending_tasks:
                         reply_text += f"• **{t['usuario_nome']}**: {t['titulo']} ({t['hora']}) - *🔵 {t['reward_xp']} XP | 🪙 {t['reward_gold']} Gold*<br>"
+                is_ollama_parsed = True
+            elif intent == "salvar_receita":
+                nome = detalhes.get("nome")
+                ingredientes = detalhes.get("ingredientes")
+                passo_a_passo = detalhes.get("passo_a_passo")
+                
+                if not nome or not ingredientes:
+                    reply_text = "🤖 Para registrar uma receita, preciso pelo menos do nome e dos ingredientes!"
+                else:
+                    formatted_content = format_recipe_content(ingredientes, passo_a_passo)
+                    save_memory("Receitas", nome, formatted_content)
+                    formatted_content_br = formatted_content.replace('\n', '<br>')
+                    reply_text = (
+                        f"🍳 **Receita registrada com sucesso!**<br><br>"
+                        f"📖 **Nome:** {nome.title()}<br><br>"
+                        f"{formatted_content_br}"
+                    )
+                is_ollama_parsed = True
+            elif intent == "deletar_receita":
+                recipe_name = detalhes.get("receita")
+                if not recipe_name:
+                    reply_text = "🤖 Por favor, informe o nome da receita que deseja deletar."
+                else:
+                    memories = get_all_memories()
+                    recipe_mem = None
+                    for m in memories:
+                        if m['categoria'] == 'Receitas' and m['chave'].lower().strip() == recipe_name.lower().strip():
+                            recipe_mem = m
+                            break
+                    if recipe_mem:
+                        delete_memory(recipe_mem['id'])
+                        reply_text = f"🗑️ **Receita '{recipe_name.title()}' deletada com sucesso!**"
+                    else:
+                        reply_text = f"🤖 Não encontrei nenhuma receita cadastrada com o nome '{recipe_name.title()}'."
+                is_ollama_parsed = True
+            elif intent == "comprar_receita":
+                recipe_name = detalhes.get("receita")
+                if not recipe_name:
+                    reply_text = "🤖 Por favor, me diga qual receita você quer fazer para gerar a lista de compras!"
+                else:
+                    memories = get_all_memories()
+                    recipe_mem = None
+                    recipes = [m for m in memories if m['categoria'] == 'Receitas']
+                    if recipes:
+                        best_match, score = search_best_memory(recipe_name, recipes)
+                        if best_match and score >= 0.15:
+                            recipe_mem = best_match
+                            
+                    if recipe_mem:
+                        content = recipe_mem['conteudo']
+                        ingredients_list = []
+                        lines = content.split('\n')
+                        in_ingredients = False
+                        for line in lines:
+                            line_strip = line.strip()
+                            if line_strip.lower().startswith('ingredientes:'):
+                                in_ingredients = True
+                                continue
+                            if line_strip.lower().startswith('passo a passo:'):
+                                in_ingredients = False
+                                continue
+                            if in_ingredients:
+                                if line_strip.startswith('-') or line_strip.startswith('*') or line_strip.startswith('•'):
+                                    cleaned = line_strip[1:].strip()
+                                    if cleaned:
+                                        ingredients_list.append(cleaned)
+                                elif line_strip:
+                                    ingredients_list.append(line_strip)
+                                    
+                        if not ingredients_list:
+                            idx_inst = content.lower().find('passo a passo')
+                            if idx_inst != -1:
+                                ing_part = content[:idx_inst].strip()
+                            else:
+                                ing_part = content.strip()
+                            if ing_part.lower().startswith('ingredientes:'):
+                                ing_part = ing_part[len('ingredientes:'):].strip()
+                            if '\n' in ing_part:
+                                ingredients_list = [i.strip() for i in ing_part.split('\n') if i.strip()]
+                            else:
+                                ingredients_list = [i.strip() for i in ing_part.split(',') if i.strip()]
+                                
+                        cleaned_list = []
+                        for ing in ingredients_list:
+                            item = ing.strip()
+                            while item and item[0] in ['-', '*', '•', ' ']:
+                                item = item[1:].strip()
+                            if item:
+                                cleaned_list.append(item)
+                        ingredients_list = cleaned_list
+                        
+                        if ingredients_list:
+                            market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+                            if market_lists:
+                                target_list = market_lists[0]
+                                old_content = target_list['conteudo']
+                                if ':' in old_content:
+                                    list_part = old_content.split(':', 1)[1].strip()
+                                else:
+                                    list_part = old_content
+                                    
+                                list_part_clean = list_part.replace(' e ', ', ')
+                                if list_part_clean.endswith('.'):
+                                    list_part_clean = list_part_clean[:-1]
+                                list_part_clean = list_part_clean.strip()
+                                old_items = [item.strip() for item in list_part_clean.split(',')]
+                                old_items = [item for item in old_items if item]
+                            else:
+                                target_list = None
+                                old_items = []
+                                
+                            merged_items = []
+                            seen_lower = set()
+                            added_items = []
+                            
+                            for item in old_items:
+                                item_lower = item.lower().strip()
+                                if item_lower not in seen_lower and item_lower != "":
+                                    seen_lower.add(item_lower)
+                                    merged_items.append(item.strip().capitalize())
+                                    
+                            for ing in ingredients_list:
+                                if ing:
+                                    ing_clean_cap = ing[0].upper() + ing[1:]
+                                    ing_lower = ing.lower().strip()
+                                    if ing_lower not in seen_lower:
+                                        seen_lower.add(ing_lower)
+                                        merged_items.append(ing_clean_cap)
+                                        added_items.append(ing_clean_cap)
+                                        
+                            if merged_items:
+                                if len(merged_items) > 1:
+                                    formatted_keep = ", ".join(merged_items[:-1]) + " e " + merged_items[-1]
+                                else:
+                                    formatted_keep = merged_items[0]
+                                new_content = f"A lista de compras do mercado é: {formatted_keep}."
+                                
+                                if target_list:
+                                    save_memory("Mercado", target_list['chave'], new_content)
+                                else:
+                                    save_memory("Mercado", "lista compras mercado", new_content)
+                                    
+                            formatted_ing_bullets = "<br>".join([f"• {ing}" for ing in ingredients_list])
+                            reply_text = (
+                                f"🛒 **Ingredientes para {recipe_mem['chave'].title()} obtidos!**<br><br>"
+                                f"📋 **Itens necessários:**<br>{formatted_ing_bullets}<br><br>"
+                            )
+                            if added_items:
+                                added_str = ", ".join(added_items)
+                                reply_text += f"➕ **Adicionado(s) à sua lista de compras:** {added_str}<br>"
+                            else:
+                                reply_text += "✨ Todos os itens já estavam na sua lista de compras!<br>"
+                            reply_text += f"<br>💡 *Você pode ver a lista atualizada no painel lateral!*"
+                        else:
+                            reply_text = f"🤖 Não consegui extrair os ingredientes da receita '{recipe_mem['chave'].title()}'."
+                    else:
+                        reply_text = f"🤖 Não encontrei a receita '{recipe_name}' nas minhas memórias. Cadastre-a primeiro!"
                 is_ollama_parsed = True
         else:
             # Ollama offline or returned invalid response

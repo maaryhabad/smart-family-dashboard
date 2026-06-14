@@ -15,6 +15,7 @@ Uma inteligência centralizadora para guardar e consultar informações do dia a
   2. Registrar o feedback localmente.
   3. Recompilar o modelo Ollama `dashfamilia-ia` em background para aprender o comportamento correto!
 * **Status Visual do Cérebro**: O cabeçalho exibe badges dinâmicos (**Online**, **Offline**, **Treinando IA... 🧠**) e bloqueia interações temporariamente durante a compilação do modelo local.
+* **Gestão de Receitas e Lista de Compras Inteligente**: Cadastro, edição, busca e exclusão de receitas (divididas em ingredientes e passo a passo) diretamente por comandos de chat. Com o comando *"Quero fazer [receita], o que preciso comprar?"*, o assistente extrai os ingredientes necessários da memória e os adiciona à lista de compras de mercado (`Mercado`) automaticamente.
 
 ### 💰 Controle Financeiro Familiar
 Gestão integrada de fluxo de caixa familiar.
@@ -34,6 +35,7 @@ Transforma as tarefas domésticas da casa em uma jornada divertida de RPG (Role-
 * **Integração com Calendário**: As quests ativas são sincronizadas automaticamente como eventos no calendário familiar, ganhando um checkmark (`✅`) no título assim que completadas.
 * **Resgate de Recompensas**: Loja de itens com preços em ouro virtual, permitindo que cada usuário troque seu ouro por recompensas customizadas (ex: SPA para Mari, Videogame para Cassi, Desenhos/Tablet para Isa).
 * **NLU Conversacional**: Conclusão de tarefas e resgate de recompensas podem ser feitos digitando comandos diretamente no chat (ex: *"completei a tarefa de limpar a caixa de areia"* ou *"Isa quer comprar a recompensa de historinha"*), com fallback local offline robusto.
+* **Divisão Justa de Tarefas Domésticas**: Tarefas de faxina (passar aspirador, passar pano, lavar roupa) são divididas inteligentemente entre Mari e Cassi em dias apropriados, e a pequena Isa fica responsável por tarefas leves adequadas para a idade, como *"Tirar o lixo do banheiro"* (1x por semana).
 
 ---
 

@@ -106,21 +106,40 @@ def get_financas():
 
 @app.route('/api/calendario')
 def get_calendario():
-    from modules.ia_memoria.database import get_all_events
-    events = get_all_events()
+    from modules.ia_memoria.database import get_db_connection, DATABASE_PATH
+    conn = get_db_connection(DATABASE_PATH)
+    cursor = conn.cursor()
+    # Query events left joined with tasks to get task completion status and rewards
+    cursor.execute('''
+        SELECT 
+            e.id, e.titulo, e.data, e.hora, e.responsavel, e.cor, e.categoria, 
+            e.google_event_id, e.localizacao, e.recorrencia,
+            t.id AS task_id, t.completed AS task_completed, t.reward_xp, t.reward_gold
+        FROM eventos e
+        LEFT JOIN tarefas t ON e.id = t.evento_calendario_id
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    
     mapped_events = []
-    for e in events:
+    for r in rows:
+        is_task = r["task_id"] is not None
         mapped_events.append({
-            "id": e.get("id"),
-            "title": e.get("titulo"),
-            "date": e.get("data"),
-            "time": e.get("hora"),
-            "user": e.get("responsavel"),
-            "color": e.get("cor"),
-            "category": e.get("categoria"),
-            "google_event_id": e.get("google_event_id"),
-            "localizacao": e.get("localizacao"),
-            "recorrencia": e.get("recorrencia")
+            "id": r["id"],
+            "title": r["titulo"],
+            "date": r["data"],
+            "time": r["hora"],
+            "user": r["responsavel"],
+            "color": r["cor"],
+            "category": r["categoria"],
+            "google_event_id": r["google_event_id"],
+            "localizacao": r["localizacao"],
+            "recorrencia": r["recorrencia"],
+            "is_task": is_task,
+            "task_id": r["task_id"],
+            "completed": bool(r["task_completed"]) if is_task else False,
+            "reward_xp": r["reward_xp"],
+            "reward_gold": r["reward_gold"]
         })
     return jsonify(mapped_events)
 

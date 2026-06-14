@@ -311,12 +311,19 @@
                         </div>
 
                         <!-- Sidebar Events list -->
-                        <div class="glass-panel calendar-sidebar">
+                        <div class="glass-panel calendar-sidebar" style="display: flex; flex-direction: column;">
                             <div class="vault-header" style="padding: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 15px;">
                                 <h3 style="margin: 0;">Eventos Agendados</h3>
                                 <button id="btn-add-event" class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 6px 12px;">+ Novo Evento</button>
                             </div>
-                            <div class="events-list" id="calendar-events-list">
+                            <div class="events-list" id="calendar-events-list" style="max-height: 250px; overflow-y: auto; padding-right: 4px; margin-bottom: 15px;">
+                                <!-- Injected via JavaScript -->
+                            </div>
+                            
+                            <div class="vault-header" style="padding: 15px 0 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 15px; border-top: 1px solid rgba(255,255,255,0.08);">
+                                <h3 style="margin: 0;">Missões de Hoje 📋</h3>
+                            </div>
+                            <div class="events-list" id="calendar-tasks-list" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
                                 <!-- Injected via JavaScript -->
                             </div>
                         </div>

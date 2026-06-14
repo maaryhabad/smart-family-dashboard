@@ -4,7 +4,8 @@ import threading
 from datetime import datetime, timedelta
 from .database import (
     get_all_events, save_event, delete_event, 
-    update_event, update_event_google_id
+    update_event, update_event_google_id,
+    get_deleted_event_google_ids, remove_deleted_event_google_id
 )
 
 def safe_print(*args, **kwargs):
@@ -217,14 +218,20 @@ def delete_event_from_google(google_event_id, service=None):
         return True
     except Exception as e:
         print(f"[Google Calendar] Error deleting event: {e}")
+        if "404" in str(e) or "notFound" in str(e) or "Not Found" in str(e):
+            return "404"
         return False
 
-def delete_event_from_google_background(google_event_id):
+def delete_event_from_google_background(google_event_id, db_path=None):
     """Runs the Google Calendar deletion in a background thread."""
-    t = threading.Thread(
-        target=delete_event_from_google,
-        args=(google_event_id,)
-    )
+    def run():
+        res = delete_event_from_google(google_event_id)
+        if res is True or res == "404":
+            try:
+                remove_deleted_event_google_id(google_event_id, db_path)
+            except Exception as e:
+                print(f"[Google Calendar] Error removing event from deleted queue: {e}")
+    t = threading.Thread(target=run)
     t.daemon = True
     t.start()
 
@@ -251,6 +258,13 @@ def sync_calendars(db_path=None):
     calendar_id = get_calendar_id()
     
     try:
+        # 0. Sync deletions from local eventos_deletados queue
+        deleted_google_ids = get_deleted_event_google_ids(db_path)
+        for g_id in deleted_google_ids:
+            res_del = delete_event_from_google(g_id, service)
+            if res_del is True or res_del == "404":
+                remove_deleted_event_google_id(g_id, db_path)
+                
         # 1. Push any local events that don't have a google_event_id yet
         local_events = get_all_events(db_path)
         for le in local_events:
@@ -286,8 +300,13 @@ def sync_calendars(db_path=None):
         local_events = get_all_events(db_path)
         local_by_google_id = {e['google_event_id']: e for e in local_events if e['google_event_id']}
         
+        # Fetch updated deleted list to avoid pulling newly deleted items
+        deleted_google_ids = get_deleted_event_google_ids(db_path)
+        
         for g_event in google_events:
             g_id = g_event.get('id')
+            if g_id in deleted_google_ids:
+                continue
             active_google_ids.add(g_id)
             
             summary = g_event.get('summary', 'Compromisso sem título')

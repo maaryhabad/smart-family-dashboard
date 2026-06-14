@@ -50,6 +50,8 @@ def classify_category(text):
         return 'Organização'
     if any(word in text_lower for word in ['pipoca', 'cachorro', 'gato', 'pet', 'vacina', 'racao', 'veterinario', 'remedio']):
         return 'Pets'
+    if any(word in text_lower for word in ['receita', 'receitas', 'ingredientes', 'passo a passo', 'preparo', 'cozinhar']):
+        return 'Receitas'
     return 'Geral'
 
 

@@ -886,8 +886,8 @@ function renderCalendarGrid(year, month) {
     }
     
     // Fill days of the month
-    const systemDate = new Date(); // To mock "today" as June 10, 2026
-    const mockTodayDay = 10; // Let's mock today as 10th of June
+    const systemDate = new Date(); // To mock "today" as June 14, 2026
+    const mockTodayDay = 14; // Let's mock today as 14th of June
     
     for (let day = 1; day <= totalDays; day++) {
         const dayDiv = document.createElement('div');
@@ -916,8 +916,15 @@ function renderCalendarGrid(year, month) {
             dayEvents.forEach(evt => {
                 const dot = document.createElement('span');
                 dot.className = 'event-dot';
+                if (evt.is_task) {
+                    dot.classList.add('task-dot');
+                    if (evt.completed) {
+                        dot.classList.add('completed');
+                    }
+                }
                 dot.style.backgroundColor = evt.color;
-                dot.title = evt.title;
+                const typePrefix = evt.is_task ? '📋 [Missão] ' : '📅 [Evento] ';
+                dot.title = typePrefix + evt.title;
                 dotsContainer.appendChild(dot);
             });
             dayDiv.appendChild(dotsContainer);
@@ -928,79 +935,159 @@ function renderCalendarGrid(year, month) {
 }
 
 function renderEventsList() {
-    const listContainer = document.getElementById('calendar-events-list');
-    listContainer.innerHTML = '';
+    const eventsListContainer = document.getElementById('calendar-events-list');
+    const tasksListContainer = document.getElementById('calendar-tasks-list');
     
-    // Sort events by date ascending
-    const sortedEvents = [...calendarEvents].sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (eventsListContainer) eventsListContainer.innerHTML = '';
+    if (tasksListContainer) tasksListContainer.innerHTML = '';
     
-    sortedEvents.forEach(evt => {
-        const card = document.createElement('div');
-        card.className = 'event-card';
-        card.style.borderLeft = `4px solid ${evt.color}`;
+    // Mock today is June 14, 2026 (based on calendar grid init)
+    const todayStr = '2026-06-14';
+    const todayDate = new Date(todayStr);
+    const maxDate = new Date(todayDate);
+    maxDate.setDate(todayDate.getDate() + 8);
+    const maxDateStr = maxDate.toISOString().split('T')[0];
+    
+    // ----------------------------------------------------
+    // 1. RENDER APPOINTMENTS (Next 8 days, de-duplicated)
+    // ----------------------------------------------------
+    if (eventsListContainer) {
+        // Filter regular events (not tasks) within next 8 days [todayStr, maxDateStr]
+        const filteredEvents = calendarEvents.filter(evt => {
+            if (evt.is_task) return false;
+            return evt.date >= todayStr && evt.date <= maxDateStr;
+        });
         
-        // Format date display (e.g. 14 de Junho)
-        const dateParts = evt.date.split('-');
-        const dateFormatted = `${dateParts[2]}/${dateParts[1]}`;
+        // Sort by date then time
+        filteredEvents.sort((a, b) => {
+            const dateDiff = new Date(a.date) - new Date(b.date);
+            if (dateDiff !== 0) return dateDiff;
+            return a.time.localeCompare(b.time);
+        });
         
-        let metaHtml = `
-            <span>🕒 ${evt.time}</span>
-            <span>📅 ${dateFormatted}</span>
-            <span>👤 ${evt.user}</span>
-        `;
-        if (evt.localizacao) {
-            metaHtml += `<span style="display: block; margin-top: 4px; font-size: 0.75rem; color: rgba(255,255,255,0.75);">📍 ${evt.localizacao}</span>`;
-        }
-        
-        let recurrenceBadge = '';
-        if (evt.recorrencia) {
-            let label = 'Repete';
-            if (evt.recorrencia.includes('FREQ=WEEKLY')) {
-                const day_map = {
-                    "MO": "seg",
-                    "TU": "ter",
-                    "WE": "qua",
-                    "TH": "qui",
-                    "FR": "sex",
-                    "SA": "sáb",
-                    "SU": "dom"
-                };
-                let day_found = null;
-                for (let code in day_map) {
-                    if (evt.recorrencia.includes(`BYDAY=${code}`)) {
-                        day_found = day_map[code];
-                        break;
-                    }
-                }
-                label = day_found ? `Semanal (${day_found})` : 'Semanal';
+        // De-duplicate by title (case-insensitive) to collapse recurring events
+        const uniqueEvents = [];
+        const seenTitles = new Set();
+        filteredEvents.forEach(evt => {
+            const cleanTitle = evt.title.toLowerCase().trim();
+            if (!seenTitles.has(cleanTitle)) {
+                seenTitles.add(cleanTitle);
+                uniqueEvents.push(evt);
             }
-            recurrenceBadge = `<span class="tag-difficulty" style="background-color: rgba(255,255,255,0.1); color: #fff; margin-left: 4px;">🔁 ${label}</span>`;
-        }
+        });
         
-        card.innerHTML = `
-            <div class="event-card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <span class="event-card-title" style="font-weight: 600;">${evt.title}</span>
-                    <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-                        <span class="tag-difficulty" style="background-color: ${evt.color}20; color: ${evt.color}">${evt.category}</span>
-                        ${recurrenceBadge}
+        if (uniqueEvents.length === 0) {
+            eventsListContainer.innerHTML = '<div class="vault-empty" style="padding: 10px; font-size: 0.85rem; color: var(--text-muted);">Sem compromissos nos próximos 8 dias.</div>';
+        } else {
+            uniqueEvents.forEach(evt => {
+                const card = document.createElement('div');
+                card.className = 'event-card';
+                card.style.borderLeft = `4px solid ${evt.color}`;
+                
+                const dateParts = evt.date.split('-');
+                const dateFormatted = `${dateParts[2]}/${dateParts[1]}`;
+                
+                let metaHtml = `
+                    <span>🕒 ${evt.time}</span>
+                    <span>📅 ${dateFormatted}</span>
+                    <span>👤 ${evt.user}</span>
+                `;
+                if (evt.localizacao) {
+                    metaHtml += `<span style="display: block; margin-top: 4px; font-size: 0.75rem; color: rgba(255,255,255,0.75);">📍 ${evt.localizacao}</span>`;
+                }
+                
+                let recurrenceBadge = '';
+                if (evt.recorrencia) {
+                    let label = 'Repete';
+                    if (evt.recorrencia.includes('FREQ=WEEKLY')) {
+                        const day_map = {
+                            "MO": "seg",
+                            "TU": "ter",
+                            "WE": "qua",
+                            "TH": "qui",
+                            "FR": "sex",
+                            "SA": "sáb",
+                            "SU": "dom"
+                        };
+                        let day_found = null;
+                        for (let code in day_map) {
+                            if (evt.recorrencia.includes(`BYDAY=${code}`)) {
+                                day_found = day_map[code];
+                                break;
+                            }
+                        }
+                        label = day_found ? `Semanal (${day_found})` : 'Semanal';
+                    }
+                    recurrenceBadge = `<span class="tag-difficulty" style="background-color: rgba(255,255,255,0.1); color: #fff; margin-left: 4px;">🔁 ${label}</span>`;
+                }
+                
+                card.innerHTML = `
+                    <div class="event-card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <span class="event-card-title" style="font-weight: 600;">${evt.title}</span>
+                            <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                <span class="tag-difficulty" style="background-color: ${evt.color}20; color: ${evt.color}">${evt.category}</span>
+                                ${recurrenceBadge}
+                            </div>
+                        </div>
+                        <div class="card-actions" style="opacity: 0.8; display: flex; gap: 6px; align-self: flex-start;">
+                            <button class="btn-event-edit" title="Editar Evento" style="background: none; border: none; cursor: pointer; padding: 2px; font-size: 0.8rem;">✏️</button>
+                            <button class="btn-event-delete" title="Excluir Evento" style="background: none; border: none; cursor: pointer; padding: 2px; font-size: 0.8rem;">🗑️</button>
+                        </div>
                     </div>
-                </div>
-                <div class="card-actions" style="opacity: 0.8; display: flex; gap: 6px; align-self: flex-start;">
-                    <button class="btn-event-edit" title="Editar Evento" style="background: none; border: none; cursor: pointer; padding: 2px; font-size: 0.8rem;">✏️</button>
-                    <button class="btn-event-delete" title="Excluir Evento" style="background: none; border: none; cursor: pointer; padding: 2px; font-size: 0.8rem;">🗑️</button>
-                </div>
-            </div>
-            <div class="event-card-meta" style="margin-top: 8px;">
-                ${metaHtml}
-            </div>
-        `;
+                    <div class="event-card-meta" style="margin-top: 8px;">
+                        ${metaHtml}
+                    </div>
+                `;
+                
+                card.querySelector('.btn-event-edit').addEventListener('click', () => openEventModal(evt));
+                card.querySelector('.btn-event-delete').addEventListener('click', () => confirmDeleteEvent(evt));
+                
+                eventsListContainer.appendChild(card);
+            });
+        }
+    }
+    
+    // ----------------------------------------------------
+    // 2. RENDER TODAY'S TASKS (Missões de Hoje)
+    // ----------------------------------------------------
+    if (tasksListContainer) {
+        // Filter tasks scheduled for today (date === todayStr)
+        const todayTasks = calendarEvents.filter(evt => evt.is_task && evt.date === todayStr);
         
-        card.querySelector('.btn-event-edit').addEventListener('click', () => openEventModal(evt));
-        card.querySelector('.btn-event-delete').addEventListener('click', () => confirmDeleteEvent(evt));
+        // Sort by time
+        todayTasks.sort((a, b) => a.time.localeCompare(b.time));
         
-        listContainer.appendChild(card);
-    });
+        if (todayTasks.length === 0) {
+            tasksListContainer.innerHTML = '<div class="vault-empty" style="padding: 10px; font-size: 0.85rem; color: var(--text-muted);">🎉 Nenhuma missão pendente para hoje!</div>';
+        } else {
+            todayTasks.forEach(evt => {
+                const card = document.createElement('div');
+                card.className = `event-card task-card ${evt.completed ? 'completed' : ''}`;
+                
+                const statusIcon = evt.completed ? '✅' : '⏳';
+                const statusText = evt.completed ? 'Concluída' : 'Pendente';
+                const statusClass = evt.completed ? 'text-green' : 'text-highlight';
+                
+                card.innerHTML = `
+                    <div class="event-card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div style="display: flex; flex-direction: column; gap: 2px; width: 100%;">
+                            <span class="event-card-title" style="font-weight: 600;">${evt.title}</span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.75rem;">
+                                <span class="${statusClass}" style="font-weight: 500;">${statusIcon} ${statusText}</span>
+                                <span style="color: var(--color-yellow); font-weight: 600;">🔵 ${evt.reward_xp} XP | 🪙 ${evt.reward_gold} G</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="event-card-meta" style="margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+                        <span>🕒 ${evt.time}</span>
+                        <span>👤 Responsável: <strong>${evt.user}</strong></span>
+                    </div>
+                `;
+                tasksListContainer.appendChild(card);
+            });
+        }
+    }
 }
 
 function openEventModal(event = null) {

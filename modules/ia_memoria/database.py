@@ -97,6 +97,14 @@ def init_db(db_path=None):
         )
     ''')
     
+    # Create table eventos_deletados
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS eventos_deletados (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            google_event_id TEXT UNIQUE NOT NULL
+        )
+    ''')
+    
     # Check if empty to seed initial values
     cursor.execute("SELECT COUNT(*) FROM memorias")
     count = cursor.fetchone()[0]
@@ -251,11 +259,39 @@ def save_event(titulo, data, hora, responsavel='Família', cor='#5f27cd', catego
     return event_id
 
 def delete_event(event_id, db_path=None):
-    """Deletes an event by ID."""
+    """Deletes an event by ID and records its google_event_id if present for deletion synchronization."""
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
+    
+    # Record google_event_id if it exists before deleting
+    cursor.execute("SELECT google_event_id FROM eventos WHERE id = ?", (event_id,))
+    row = cursor.fetchone()
+    if row and row['google_event_id']:
+        g_id = row['google_event_id']
+        cursor.execute("INSERT OR IGNORE INTO eventos_deletados (google_event_id) VALUES (?)", (g_id,))
+        
     cursor.execute("DELETE FROM eventos WHERE id = ?", (event_id,))
+    conn.commit()
+    conn.close()
+
+def get_deleted_event_google_ids(db_path=None):
+    """Fetches all google_event_ids that were deleted locally."""
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT google_event_id FROM eventos_deletados")
+    rows = cursor.fetchall()
+    ids = [row['google_event_id'] for row in rows]
+    conn.close()
+    return ids
+
+def remove_deleted_event_google_id(google_event_id, db_path=None):
+    """Removes a google_event_id from the deleted list once synced."""
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM eventos_deletados WHERE google_event_id = ?", (google_event_id,))
     conn.commit()
     conn.close()
 
@@ -295,20 +331,24 @@ def seed_tasks(db_path=None):
         ('Isa', 'Preparar mochila escolar para amanhã', 'Infantil', 'Fácil', 10, 3, '20:00', [1, 2, 3, 4, 5]),
         ('Isa', 'Trocar água dos gatos e limpar respingos', 'Pets', 'Fácil', 10, 3, '18:00', [0, 1, 2, 3, 4, 5, 6]),
         ('Isa', 'Guardar sapatilhas e roupas do Ballet', 'Infantil', 'Fácil', 10, 3, '14:00', [6]),
+        ('Isa', 'Tirar o lixo do banheiro', 'Limpeza', 'Fácil', 10, 3, '18:30', [6]), # Saturday
         
         # Cassi
         ('Cassi', 'Limpar caixa de areia dos gatos e repor areia', 'Pets', 'Médio', 15, 5, '08:00', [0, 1, 2, 3, 4, 5, 6]),
         ('Cassi', 'Cuidar das plantas e horta da varanda (FlyLady)', 'Organização', 'Fácil', 12, 4, '11:30', [2]), # Tue WFH
         ('Cassi', 'Preparar o jantar e limpar a pia (Rotina Noturna)', 'Limpeza', 'Difícil', 25, 8, '19:30', [3]), # Wed (Mari away)
         ('Cassi', 'Levar lixo e recicláveis para a lixeira externa', 'Organização', 'Fácil', 10, 3, '20:30', [4]), # Thu
-        ('Cassi', 'Aspirar a sala e passar pano nos pisos (Bênção Semanal)', 'Limpeza', 'Difícil', 25, 8, '14:00', [6]), # Sat
+        ('Cassi', 'Passar aspirador na casa (Bênção Semanal)', 'Limpeza', 'Difícil', 25, 8, '14:00', [6]), # Sat
+        ('Cassi', 'Lavar roupas da semana (lavar roupa)', 'Limpeza', 'Difícil', 20, 6, '09:00', [0]), # Sun
         
         # Mari
         ('Mari', 'Brilhar a pia da cozinha (Rotina Noturna FlyLady)', 'Limpeza', 'Médio', 15, 5, '21:00', [0, 1, 2, 4, 5, 6]), # except Wed
         ('Mari', 'Resgate de Cômodo: 5 minutos apagando foco de bagunça', 'Organização', 'Fácil', 12, 4, '18:30', [0, 1, 2, 4, 5, 6]), # except Wed
         ('Mari', 'Reabastecer alimentador automático de ração dos gatos', 'Pets', 'Médio', 15, 5, '11:00', [0]), # Sunday
         ('Mari', 'Trocar lençóis e toalhas da casa (Bênção Semanal)', 'Limpeza', 'Difícil', 25, 8, '09:00', [1]), # Mon
-        ('Mari', 'Espanar poeira dos móveis e limpar espelhos', 'Limpeza', 'Médio', 20, 6, '14:00', [5]) # Fri
+        ('Mari', 'Espanar poeira dos móveis e limpar espelhos', 'Limpeza', 'Médio', 20, 6, '14:00', [5]), # Fri
+        ('Mari', 'Passar pano nos pisos (Bênção Semanal)', 'Limpeza', 'Médio', 15, 5, '15:00', [6]), # Sat
+        ('Mari', 'Lavar roupas de cama e banho (lavar roupa)', 'Limpeza', 'Difícil', 20, 6, '10:00', [1]) # Mon # Fri
     ]
     
     user_colors = {

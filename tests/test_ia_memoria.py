@@ -25,6 +25,7 @@ def force_clean_db(db_path):
         cursor.execute("DROP TABLE IF EXISTS usuarios")
         cursor.execute("DROP TABLE IF EXISTS tarefas")
         cursor.execute("DROP TABLE IF EXISTS recompensas")
+        cursor.execute("DROP TABLE IF EXISTS eventos_deletados")
         conn.commit()
         conn.close()
     except Exception:
@@ -1008,6 +1009,152 @@ class TestGamifiedTasks(unittest.TestCase):
         intent4, details4 = parse_intent_locally("o que o Cassi tem de tarefas hoje?")
         self.assertEqual(intent4, "listar_tarefas")
         self.assertEqual(details4['usuario'], "Cassi")
+
+
+class TestDeletedEventsQueue(unittest.TestCase):
+    def setUp(self):
+        force_clean_db(TEST_DB_PATH)
+        init_db(TEST_DB_PATH)
+
+    def tearDown(self):
+        force_clean_db(TEST_DB_PATH)
+
+    def test_delete_event_adds_to_queue(self):
+        from modules.ia_memoria.database import (
+            save_event, delete_event, get_deleted_event_google_ids,
+            remove_deleted_event_google_id
+        )
+        # 1. Save an event with a google_event_id
+        evt_id = save_event(
+            titulo="Evento Teste Deletado",
+            data="2026-06-15",
+            hora="10:00",
+            google_event_id="test_g_id_123",
+            db_path=TEST_DB_PATH
+        )
+        # Queue should be empty initially
+        self.assertEqual(get_deleted_event_google_ids(TEST_DB_PATH), [])
+        
+        # 2. Delete the event
+        delete_event(evt_id, db_path=TEST_DB_PATH)
+        
+        # 3. Check if the google_event_id was recorded in the queue
+        deleted_ids = get_deleted_event_google_ids(TEST_DB_PATH)
+        self.assertEqual(deleted_ids, ["test_g_id_123"])
+        
+        # 4. Remove it and verify it's cleared
+        remove_deleted_event_google_id("test_g_id_123", db_path=TEST_DB_PATH)
+        self.assertEqual(get_deleted_event_google_ids(TEST_DB_PATH), [])
+
+
+class TestRecipesAndChoreDivision(unittest.TestCase):
+    def setUp(self):
+        from modules.ia_memoria import database
+        self.old_db_path = database.DATABASE_PATH
+        database.DATABASE_PATH = TEST_DB_PATH
+        
+        import gc
+        gc.collect()
+        try:
+            if os.path.exists(TEST_DB_PATH):
+                os.remove(TEST_DB_PATH)
+        except PermissionError:
+            pass
+            
+        force_clean_db(TEST_DB_PATH)
+        init_db(TEST_DB_PATH)
+        self.client = app.test_client()
+        
+    def tearDown(self):
+        from modules.ia_memoria import database
+        database.DATABASE_PATH = self.old_db_path
+        
+        import gc
+        gc.collect()
+        try:
+            if os.path.exists(TEST_DB_PATH):
+                os.remove(TEST_DB_PATH)
+        except PermissionError:
+            pass
+
+    def test_classify_category_recipes(self):
+        self.assertEqual(classify_category("Receita de Panqueca de Aveia"), "Receitas")
+        self.assertEqual(classify_category("Ingredientes para o almoço: batata, cebola"), "Receitas")
+
+    def test_parse_recipe_details(self):
+        from modules.ia_memoria.routes import parse_recipe_details
+        msg = "Salvar receita de Panqueca de Aveia. Ingredientes: 1 xícara de aveia, 2 bananas, 2 ovos. Passo a passo: Bater tudo e fritar."
+        res = parse_recipe_details(msg)
+        self.assertIsNotNone(res)
+        self.assertEqual(res['nome'].lower(), "panqueca de aveia")
+        self.assertIn("1 xícara de aveia", res['ingredientes'])
+        self.assertIn("Bater tudo e fritar", res['passo_a_passo'])
+
+    def test_chat_salvar_receita(self):
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "salvar receita bolo de caneca: ingredientes: 1 ovo, 2 colheres de cacau. passo a passo: misturar e colocar no microondas"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("Receita registrada com sucesso!", data["reply"])
+        self.assertIn("Bolo De Caneca", data["reply"])
+        
+        memories = get_all_memories(TEST_DB_PATH)
+        recipe = next((m for m in memories if m["categoria"] == "Receitas" and m["chave"] == "bolo de caneca"), None)
+        self.assertIsNotNone(recipe)
+        self.assertIn("1 ovo", recipe["conteudo"])
+
+    def test_chat_deletar_receita(self):
+        save_memory("Receitas", "bolo de caneca", "Ingredientes:\n- 1 ovo", TEST_DB_PATH)
+        
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "deletar receita bolo de caneca"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("deletada com sucesso", data["reply"])
+        
+        memories = get_all_memories(TEST_DB_PATH)
+        recipe = next((m for m in memories if m["categoria"] == "Receitas" and m["chave"] == "bolo de caneca"), None)
+        self.assertIsNone(recipe)
+
+    def test_chat_comprar_receita(self):
+        content = "Ingredientes:\n- 1 xícara de aveia\n- 2 bananas maduras\n\nPasso a passo:\n1. Bater tudo."
+        save_memory("Receitas", "panqueca de aveia", content, TEST_DB_PATH)
+        
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "Quero fazer panqueca de aveia, o que preciso comprar?"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("Ingredientes para Panqueca De Aveia obtidos!", data["reply"])
+        self.assertIn("1 xícara de aveia", data["reply"])
+        
+        memories = get_all_memories(TEST_DB_PATH)
+        market_list = next((m for m in memories if m["categoria"] == "Mercado"), None)
+        self.assertIsNotNone(market_list)
+        self.assertIn("1 xícara de aveia", market_list["conteudo"])
+        self.assertIn("2 bananas maduras", market_list["conteudo"])
+
+    def test_chores_division_seeded(self):
+        from modules.ia_memoria.database import get_all_tasks
+        
+        tasks = get_all_tasks(TEST_DB_PATH)
+        
+        isa_trash = [t for t in tasks if t['usuario_nome'] == 'Isa' and 'lixo do banheiro' in t['titulo'].lower()]
+        self.assertEqual(len(isa_trash), 1)
+        
+        cassi_aspirador = [t for t in tasks if t['usuario_nome'] == 'Cassi' and 'passar aspirador' in t['titulo'].lower()]
+        self.assertEqual(len(cassi_aspirador), 1)
+        
+        mari_pano = [t for t in tasks if t['usuario_nome'] == 'Mari' and 'passar pano' in t['titulo'].lower()]
+        self.assertEqual(len(mari_pano), 1)
+        
+        cassi_laundry = [t for t in tasks if t['usuario_nome'] == 'Cassi' and 'lavar roupa' in t['titulo'].lower()]
+        self.assertEqual(len(cassi_laundry), 1)
+        
+        mari_laundry = [t for t in tasks if t['usuario_nome'] == 'Mari' and 'lavar roupa' in t['titulo'].lower()]
+        self.assertEqual(len(mari_laundry), 1)
 
 
 if __name__ == '__main__':

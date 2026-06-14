@@ -1290,6 +1290,33 @@ h1, h2, h3, h4, h5, h6 {
     width: 5px;
     height: 5px;
     border-radius: 50%;
+    transition: var(--transition-smooth);
+}
+
+.event-dot.task-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+}
+
+.event-dot.task-dot.completed {
+    opacity: 0.45;
+}
+
+.event-card.task-card {
+    background: rgba(95, 39, 205, 0.05);
+    border: 1px solid rgba(95, 39, 205, 0.2);
+}
+
+.event-card.task-card.completed {
+    background: rgba(29, 209, 161, 0.03);
+    border: 1px solid rgba(29, 209, 161, 0.15);
+    opacity: 0.65;
+}
+
+.event-card.task-card.completed .event-card-title {
+    text-decoration: line-through;
+    color: var(--text-muted);
 }
 
 /* Calendar Sidebar Event List */
