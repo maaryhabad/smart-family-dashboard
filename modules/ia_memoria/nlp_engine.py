@@ -287,7 +287,13 @@ def parse_intent_with_ollama(message):
         "7. Para conversas gerais ou saudações:\n"
         "{\"intencao\": \"conversa\", \"detalhes\": {}}\n"
         "8. Para agendar compromissos no calendário:\n"
-        "{\"intencao\": \"agendar_calendario\", \"detalhes\": {\"titulo\": \"<nome do evento>\", \"data\": \"<YYYY-MM-DD>\", \"hora\": \"<HH:MM>\"}}"
+        "{\"intencao\": \"agendar_calendario\", \"detalhes\": {\"titulo\": \"<nome do evento>\", \"data\": \"<YYYY-MM-DD>\", \"hora\": \"<HH:MM>\", \"localizacao\": \"<local do evento ou null>\", \"recorrencia\": \"<recorrencia RRULE ou null>\"}}\n"
+        "9. Para concluir ou completar uma tarefa do quadro de missões:\n"
+        "{\"intencao\": \"completar_tarefa\", \"detalhes\": {\"usuario\": \"<nome do usuario>\", \"tarefa\": \"<nome/termo da tarefa>\"}}\n"
+        "10. Para comprar ou resgatar uma recompensa da loja:\n"
+        "{\"intencao\": \"resgatar_recompensa\", \"detalhes\": {\"usuario\": \"<nome do usuario>\", \"recompensa\": \"<nome/termo da recompensa>\"}}\n"
+        "11. Para listar ou ver as tarefas do dia/semana:\n"
+        "{\"intencao\": \"listar_tarefas\", \"detalhes\": {\"usuario\": \"<nome ou null para todos>\"}}"
     )
     
     payload = {

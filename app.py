@@ -118,7 +118,9 @@ def get_calendario():
             "user": e.get("responsavel"),
             "color": e.get("cor"),
             "category": e.get("categoria"),
-            "google_event_id": e.get("google_event_id")
+            "google_event_id": e.get("google_event_id"),
+            "localizacao": e.get("localizacao"),
+            "recorrencia": e.get("recorrencia")
         })
     return jsonify(mapped_events)
 
@@ -149,50 +151,206 @@ def sync_calendario_route():
             )
         return jsonify({"success": False, "error": err_msg}), 500
 
+@app.route('/api/calendario/salvar', methods=['POST'])
+def save_or_update_event_route():
+    data = request.json or {}
+    event_id = data.get("id")
+    titulo = data.get("titulo", "").strip()
+    data_evt = data.get("data", "").strip()
+    hora = data.get("hora", "").strip()
+    responsavel = data.get("responsavel", "Família").strip()
+    cor = data.get("cor", "#5f27cd").strip()
+    categoria = data.get("categoria", "Familiar").strip()
+    localizacao = data.get("localizacao", "").strip() or None
+    recorrencia = data.get("recorrencia", "").strip() or None
+    
+    if not titulo or not data_evt or not hora:
+        return jsonify({"success": False, "error": "Título, Data e Hora são obrigatórios."}), 400
+        
+    from modules.ia_memoria.database import save_event, update_event, get_all_events
+    from modules.ia_memoria.google_calendar import push_event_to_google_background, update_event_in_google_background
+    
+    if event_id:
+        update_event(
+            event_id=event_id,
+            titulo=titulo,
+            data=data_evt,
+            hora=hora,
+            responsavel=responsavel,
+            cor=cor,
+            categoria=categoria,
+            localizacao=localizacao,
+            recorrencia=recorrencia
+        )
+        
+        events = get_all_events()
+        curr_evt = next((e for e in events if e["id"] == event_id), None)
+        if curr_evt and curr_evt.get("google_event_id"):
+            update_event_in_google_background(
+                google_event_id=curr_evt["google_event_id"],
+                event_title=titulo,
+                event_date=data_evt,
+                event_time=hora,
+                localizacao=localizacao,
+                recorrencia=recorrencia
+            )
+        return jsonify({"success": True, "message": "Compromisso atualizado com sucesso!"})
+    else:
+        new_id = save_event(
+            titulo=titulo,
+            data=data_evt,
+            hora=hora,
+            responsavel=responsavel,
+            cor=cor,
+            categoria=categoria,
+            localizacao=localizacao,
+            recorrencia=recorrencia
+        )
+        push_event_to_google_background(new_id, titulo, data_evt, hora, localizacao, recorrencia)
+        return jsonify({"success": True, "message": "Compromisso cadastrado com sucesso!"})
+
+@app.route('/api/calendario/excluir', methods=['POST'])
+def delete_event_route():
+    data = request.json or {}
+    event_id = data.get("id")
+    if not event_id:
+        return jsonify({"success": False, "error": "ID do evento é obrigatório."}), 400
+        
+    from modules.ia_memoria.database import delete_event, get_all_events
+    from modules.ia_memoria.google_calendar import delete_event_from_google_background
+    
+    events = get_all_events()
+    curr_evt = next((e for e in events if e["id"] == event_id), None)
+    
+    delete_event(event_id)
+    
+    if curr_evt and curr_evt.get("google_event_id"):
+        delete_event_from_google_background(curr_evt["google_event_id"])
+        
+    return jsonify({"success": True, "message": "Compromisso excluído com sucesso!"})
+
+
 @app.route('/api/todo-gamer')
 def get_todo_gamer():
-    return jsonify(GAMES_STATE)
+    from modules.ia_memoria.database import get_all_users, get_all_tasks, get_all_rewards
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
+    return jsonify({
+        "character": users[0] if users else {},
+        "profiles": users,
+        "quests": tasks,
+        "rewards": rewards
+    })
 
 @app.route('/api/todo-gamer/complete', methods=['POST'])
 def complete_quest():
     data = request.json or {}
     quest_id = data.get("quest_id")
+    if not quest_id:
+        return jsonify({"error": "ID da missão não fornecido."}), 400
+        
+    from modules.ia_memoria.database import complete_task_in_db, get_all_users, get_all_tasks, get_all_rewards
     
-    quest = next((q for q in GAMES_STATE["quests"] if q["id"] == quest_id), None)
+    # Get rewards before completion for return payload
+    tasks_all = get_all_tasks()
+    quest = next((t for t in tasks_all if t['id'] == quest_id), None)
     if not quest:
         return jsonify({"error": "Missão não encontrada."}), 404
         
-    if quest["completed"]:
-        return jsonify({"message": "Missão já concluída anteriormente!", "state": GAMES_STATE})
+    success, user_profile, leveled_up = complete_task_in_db(quest_id)
+    if not success:
+        return jsonify({"error": "Missão já concluída anteriormente."}), 400
         
-    # Mark completed and apply rewards
-    quest["completed"] = True
-    char = GAMES_STATE["character"]
-    char["xp"] += quest["reward_xp"]
-    char["gold"] += quest["reward_gold"]
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
     
-    # Level up logic
-    leveled_up = False
-    while char["xp"] >= char["xp_to_next_level"]:
-        char["xp"] -= char["xp_to_next_level"]
-        char["level"] += 1
-        char["xp_to_next_level"] = int(char["xp_to_next_level"] * 1.2) # Escalation
-        leveled_up = True
-        
     return jsonify({
         "message": "Missão concluída com sucesso! Recompensas creditadas.",
         "leveled_up": leveled_up,
         "reward_xp": quest["reward_xp"],
         "reward_gold": quest["reward_gold"],
-        "state": GAMES_STATE
+        "state": {
+            "character": users[0] if users else {},
+            "profiles": users,
+            "quests": tasks,
+            "rewards": rewards
+        }
     })
 
 @app.route('/api/todo-gamer/reset', methods=['POST'])
 def reset_quests():
-    # Simple route to reset quests for demonstration/testing
-    for quest in GAMES_STATE["quests"]:
-        quest["completed"] = False
-    return jsonify({"message": "Missões reiniciadas!", "state": GAMES_STATE})
+    from modules.ia_memoria.database import reset_tasks_db, get_all_users, get_all_tasks, get_all_rewards
+    reset_tasks_db()
+    
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
+    
+    return jsonify({
+        "message": "Missões reiniciadas!",
+        "state": {
+            "character": users[0] if users else {},
+            "profiles": users,
+            "quests": tasks,
+            "rewards": rewards
+        }
+    })
+
+@app.route('/api/todo-gamer/redeem', methods=['POST'])
+def redeem_reward_route():
+    data = request.json or {}
+    reward_id = data.get("reward_id")
+    if not reward_id:
+        return jsonify({"error": "ID da recompensa é obrigatório."}), 400
+        
+    from modules.ia_memoria.database import redeem_reward_in_db, get_all_users, get_all_tasks, get_all_rewards
+    success, msg, user_profile = redeem_reward_in_db(reward_id)
+    if not success:
+        return jsonify({"error": msg}), 400
+        
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
+    
+    return jsonify({
+        "message": msg,
+        "state": {
+            "character": users[0] if users else {},
+            "profiles": users,
+            "quests": tasks,
+            "rewards": rewards
+        }
+    })
+
+@app.route('/api/todo-gamer/add-reward', methods=['POST'])
+def add_reward_route():
+    data = request.json or {}
+    user_nome = data.get("usuario_nome")
+    titulo = data.get("titulo")
+    custo = data.get("custo")
+    icone = data.get("icone")
+    
+    if not user_nome or not titulo or not custo or not icone:
+        return jsonify({"error": "Preencha todos os campos obrigatórios."}), 400
+        
+    from modules.ia_memoria.database import save_reward, get_all_users, get_all_tasks, get_all_rewards
+    save_reward(user_nome, titulo, int(custo), icone)
+    
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
+    
+    return jsonify({
+        "message": "Recompensa criada com sucesso!",
+        "state": {
+            "character": users[0] if users else {},
+            "profiles": users,
+            "quests": tasks,
+            "rewards": rewards
+        }
+    })
 
 if __name__ == '__main__':
     # Initialize SQLite database

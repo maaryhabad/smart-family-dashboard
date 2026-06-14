@@ -16,6 +16,20 @@ from modules.ia_memoria.database import (
 
 TEST_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_database.db')
 
+def force_clean_db(db_path):
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("DROP TABLE IF EXISTS memorias")
+        cursor.execute("DROP TABLE IF EXISTS eventos")
+        cursor.execute("DROP TABLE IF EXISTS usuarios")
+        cursor.execute("DROP TABLE IF EXISTS tarefas")
+        cursor.execute("DROP TABLE IF EXISTS recompensas")
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
 class TestNLPEngine(unittest.TestCase):
     
     def test_remove_accents(self):
@@ -111,6 +125,7 @@ class TestDatabaseModule(unittest.TestCase):
                 os.remove(TEST_DB_PATH)
         except PermissionError:
             pass
+        force_clean_db(TEST_DB_PATH)
             
     def tearDown(self):
         import gc
@@ -187,6 +202,14 @@ class TestDatabaseModule(unittest.TestCase):
     def test_save_and_get_events(self):
         init_db(TEST_DB_PATH)
         
+        # Clear default seeded events/tasks first
+        conn = sqlite3.connect(TEST_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM eventos")
+        cursor.execute("DELETE FROM tarefas")
+        conn.commit()
+        conn.close()
+        
         # Seed events manually since default seeding is disabled
         conn = sqlite3.connect(TEST_DB_PATH)
         cursor = conn.cursor()
@@ -256,6 +279,50 @@ class TestDatabaseModule(unittest.TestCase):
         self.assertEqual(len(events_after), 5)
         self.assertNotIn(event_id, [e["id"] for e in events_after])
 
+    def test_save_and_get_events_with_location_and_recurrence(self):
+        init_db(TEST_DB_PATH)
+        
+        # 1. Save Event with Location and Recurrence
+        event_id = save_event(
+            titulo="Ballet da Isa",
+            data="2026-06-13",
+            hora="09:00",
+            responsavel="Família",
+            cor="#5f27cd",
+            categoria="Familiar",
+            google_event_id="g_event_123",
+            localizacao="R. Comendador Araújo, 338",
+            recorrencia="RRULE:FREQ=WEEKLY;BYDAY=SA",
+            db_path=TEST_DB_PATH
+        )
+        
+        events = get_all_events(TEST_DB_PATH)
+        added = next(e for e in events if e["id"] == event_id)
+        self.assertEqual(added["titulo"], "Ballet da Isa")
+        self.assertEqual(added["localizacao"], "R. Comendador Araújo, 338")
+        self.assertEqual(added["recorrencia"], "RRULE:FREQ=WEEKLY;BYDAY=SA")
+        
+        # 2. Update Location and Recurrence
+        update_event(
+            event_id=event_id,
+            titulo="Ballet da Isa no Centro",
+            data="2026-06-13",
+            hora="10:00",
+            responsavel="Família",
+            cor="#ff0000",
+            categoria="Familiar",
+            localizacao="Rua Comendador Araújo, 400",
+            recorrencia="RRULE:FREQ=WEEKLY;BYDAY=SU",
+            db_path=TEST_DB_PATH
+        )
+        
+        events_after = get_all_events(TEST_DB_PATH)
+        updated = next(e for e in events_after if e["id"] == event_id)
+        self.assertEqual(updated["titulo"], "Ballet da Isa no Centro")
+        self.assertEqual(updated["hora"], "10:00")
+        self.assertEqual(updated["localizacao"], "Rua Comendador Araújo, 400")
+        self.assertEqual(updated["recorrencia"], "RRULE:FREQ=WEEKLY;BYDAY=SU")
+
 
 class MockThread:
     def __init__(self, target, args=(), kwargs=None, daemon=None):
@@ -280,6 +347,7 @@ class TestAPIEndpoints(unittest.TestCase):
         except PermissionError:
             pass
             
+        force_clean_db(TEST_DB_PATH)
         init_db(TEST_DB_PATH)
         self.client = app.test_client()
         
@@ -473,6 +541,7 @@ class TestOllamaIntegration(unittest.TestCase):
         except PermissionError:
             pass
             
+        force_clean_db(TEST_DB_PATH)
         init_db(TEST_DB_PATH)
         self.client = app.test_client()
         
@@ -703,10 +772,15 @@ class TestGoogleCalendarSync(unittest.TestCase):
                 os.remove(TEST_DB_PATH)
         except PermissionError:
             pass
+        force_clean_db(TEST_DB_PATH)
         init_db(TEST_DB_PATH)
         
         # Seed events manually since default seeding is disabled
         conn = sqlite3.connect(TEST_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM eventos")
+        cursor.execute("DELETE FROM tarefas")
+        conn.commit()
         cursor = conn.cursor()
         initial_events = [
             ("Almoço de Domingo na Vó", "2026-06-14", "12:30", "Família", "#5f27cd", "Familiar"),
@@ -807,6 +881,133 @@ class TestGoogleCalendarSync(unittest.TestCase):
         
         # Verify that "Dentista Mariana" (g_dentista_999) was DELETED because it fell in the sync range but wasn't in active remote events
         self.assertFalse(any(e["id"] == dentista_id for e in events_after))
+
+
+class TestGamifiedTasks(unittest.TestCase):
+    
+    def setUp(self):
+        import gc
+        gc.collect()
+        try:
+            if os.path.exists(TEST_DB_PATH):
+                os.remove(TEST_DB_PATH)
+        except PermissionError:
+            pass
+        force_clean_db(TEST_DB_PATH)
+        init_db(TEST_DB_PATH)
+        
+    def tearDown(self):
+        import gc
+        gc.collect()
+        try:
+            if os.path.exists(TEST_DB_PATH):
+                os.remove(TEST_DB_PATH)
+        except PermissionError:
+            pass
+
+    def test_db_seeding_and_helpers(self):
+        from modules.ia_memoria.database import get_all_users, get_tasks_for_user, get_rewards_for_user
+        
+        users = get_all_users(TEST_DB_PATH)
+        self.assertEqual(len(users), 3)
+        user_names = [u['nome'] for u in users]
+        self.assertIn('Mari', user_names)
+        self.assertIn('Cassi', user_names)
+        self.assertIn('Isa', user_names)
+        
+        isa_tasks = get_tasks_for_user('Isa', TEST_DB_PATH)
+        self.assertTrue(len(isa_tasks) > 0)
+        
+        cassi_rewards = get_rewards_for_user('Cassi', TEST_DB_PATH)
+        self.assertTrue(len(cassi_rewards) > 0)
+
+    def test_complete_task_and_levelup(self):
+        from modules.ia_memoria.database import get_tasks_for_user, complete_task_in_db, get_user_by_name, get_all_events
+        
+        isa_tasks = get_tasks_for_user('Isa', TEST_DB_PATH)
+        task = isa_tasks[0]
+        self.assertEqual(task['completed'], 0)
+        
+        # Complete task
+        success, user_profile, leveled_up = complete_task_in_db(task['id'], TEST_DB_PATH)
+        self.assertTrue(success)
+        self.assertEqual(user_profile['xp'], task['reward_xp'])
+        self.assertEqual(user_profile['gold'], task['reward_gold'])
+        self.assertFalse(leveled_up)
+        
+        # Verify calendar event has checkmark
+        events = get_all_events(TEST_DB_PATH)
+        evt = next(e for e in events if e['id'] == task['evento_calendario_id'])
+        self.assertTrue(evt['titulo'].startswith('✅'))
+        
+        # Test level up logic
+        # Give Cassi high XP in DB first
+        conn = get_db_connection(TEST_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE usuarios SET xp = 95, gold = 0, nivel = 1, xp_to_next_level = 100 WHERE nome = 'Cassi'")
+        conn.commit()
+        conn.close()
+        
+        cassi_tasks = get_tasks_for_user('Cassi', TEST_DB_PATH)
+        cassi_task = cassi_tasks[0]
+        
+        success2, user_profile2, leveled_up2 = complete_task_in_db(cassi_task['id'], TEST_DB_PATH)
+        self.assertTrue(success2)
+        self.assertTrue(leveled_up2)
+        self.assertEqual(user_profile2['nivel'], 2)
+        self.assertEqual(user_profile2['xp'], (95 + cassi_task['reward_xp']) - 100)
+
+    def test_redeem_reward(self):
+        from modules.ia_memoria.database import get_rewards_for_user, redeem_reward_in_db, get_user_by_name
+        
+        # Give Isa enough gold
+        conn = get_db_connection(TEST_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE usuarios SET gold = 50 WHERE nome = 'Isa'")
+        conn.commit()
+        conn.close()
+        
+        isa_rewards = get_rewards_for_user('Isa', TEST_DB_PATH)
+        reward = isa_rewards[0]
+        
+        success, msg, user_profile = redeem_reward_in_db(reward['id'], TEST_DB_PATH)
+        self.assertTrue(success)
+        self.assertEqual(user_profile['gold'], 50 - reward['custo'])
+        
+        # Insufficient gold test
+        reward2 = isa_rewards[1]
+        # Set gold to 0
+        conn = get_db_connection(TEST_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE usuarios SET gold = 0 WHERE nome = 'Isa'")
+        conn.commit()
+        conn.close()
+        
+        success2, msg2, user_profile2 = redeem_reward_in_db(reward2['id'], TEST_DB_PATH)
+        self.assertFalse(success2)
+        self.assertIn("Ouro insuficiente", msg2)
+
+    def test_local_nlu_fallbacks(self):
+        from modules.ia_memoria.routes import parse_intent_locally
+        
+        intent, details = parse_intent_locally("completei a tarefa de limpar a caixa de areia")
+        self.assertEqual(intent, "completar_tarefa")
+        self.assertEqual(details['usuario'], "Cassi")
+        self.assertEqual(details['tarefa'], "caixa de areia")
+        
+        intent2, details2 = parse_intent_locally("Isa terminou de preparar a mochila escolar")
+        self.assertEqual(intent2, "completar_tarefa")
+        self.assertEqual(details2['usuario'], "Isa")
+        self.assertEqual(details2['tarefa'], "mochila")
+        
+        intent3, details3 = parse_intent_locally("Mari quer resgatar a recompensa do spa")
+        self.assertEqual(intent3, "resgatar_recompensa")
+        self.assertEqual(details3['usuario'], "Mari")
+        self.assertEqual(details3['recompensa'], "spa")
+        
+        intent4, details4 = parse_intent_locally("o que o Cassi tem de tarefas hoje?")
+        self.assertEqual(intent4, "listar_tarefas")
+        self.assertEqual(details4['usuario'], "Cassi")
 
 
 if __name__ == '__main__':

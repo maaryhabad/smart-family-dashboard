@@ -1,10 +1,26 @@
 import os
+import sys
 import threading
 from datetime import datetime, timedelta
 from .database import (
     get_all_events, save_event, delete_event, 
     update_event, update_event_google_id
 )
+
+def safe_print(*args, **kwargs):
+    try:
+        sys.stdout.write(" ".join(map(str, args)) + "\n")
+        sys.stdout.flush()
+    except UnicodeEncodeError:
+        try:
+            cleaned_args = [str(arg).encode('ascii', 'replace').decode('ascii') for arg in args]
+            sys.stdout.write(" ".join(cleaned_args) + "\n")
+            sys.stdout.flush()
+        except Exception:
+            pass
+
+print = safe_print
+
 
 def load_dotenv():
     """Manually reads .env at the project root and populates os.environ."""
@@ -50,7 +66,7 @@ def get_calendar_service(credentials_path):
         print(f"[Google Calendar] Failed to build service: {e}")
         return None
 
-def push_event_to_google(event_id, event_title, event_date, event_time, service=None):
+def push_event_to_google(event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, service=None, db_path=None):
     """Pushes a single local event to Google Calendar."""
     root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     credentials_path = os.path.join(root_dir, 'credentials.json')
@@ -86,6 +102,12 @@ def push_event_to_google(event_id, event_title, event_date, event_time, service=
             },
         }
         
+        if localizacao:
+            event_body['location'] = localizacao
+            
+        if recorrencia:
+            event_body['recurrence'] = [recorrencia]
+            
         calendar_id = get_calendar_id()
         
         print(f"[Google Calendar] Pushing event '{event_title}' to Google Calendar ({calendar_id})...")
@@ -93,7 +115,7 @@ def push_event_to_google(event_id, event_title, event_date, event_time, service=
         google_id = created_event.get('id')
         
         if google_id:
-            update_event_google_id(event_id, google_id)
+            update_event_google_id(event_id, google_id, db_path=db_path)
             print(f"[Google Calendar] Sync successful. Google Event ID: {google_id}")
             return google_id
             
@@ -101,10 +123,74 @@ def push_event_to_google(event_id, event_title, event_date, event_time, service=
         print(f"[Google Calendar] Error pushing event: {e}")
     return None
 
-def push_event_to_google_background(event_id, event_title, event_date, event_time):
+def push_event_to_google_background(event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, db_path=None):
     t = threading.Thread(
         target=push_event_to_google,
-        args=(event_id, event_title, event_date, event_time)
+        args=(event_id, event_title, event_date, event_time, localizacao, recorrencia, None, db_path)
+    )
+    t.daemon = True
+    t.start()
+
+def update_event_in_google(google_event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, service=None):
+    """Updates an existing event in Google Calendar by its Google Event ID."""
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    credentials_path = os.path.join(root_dir, 'credentials.json')
+    
+    if not os.path.exists(credentials_path):
+        print("[Google Calendar] Update skipped: 'credentials.json' not found at project root.")
+        return False
+        
+    try:
+        if not service:
+            service = get_calendar_service(credentials_path)
+            if not service:
+                return False
+                
+        # Parse ISO date-time string
+        start_datetime = f"{event_date}T{event_time}:00"
+        
+        # Default duration: 1 hour
+        dt = datetime.strptime(start_datetime, "%Y-%m-%dT%H:%M:%S")
+        dt_end = dt + timedelta(hours=1)
+        end_datetime = dt_end.strftime("%Y-%m-%dT%H:%M:%S")
+        
+        event_body = {
+            'summary': event_title,
+            'description': 'Agendado automaticamente pelo assistente de IA do DashFamília',
+            'start': {
+                'dateTime': start_datetime,
+                'timeZone': 'America/Sao_Paulo',
+            },
+            'end': {
+                'dateTime': end_datetime,
+                'timeZone': 'America/Sao_Paulo',
+            },
+        }
+        
+        if localizacao:
+            event_body['location'] = localizacao
+        else:
+            event_body['location'] = ""
+            
+        if recorrencia:
+            event_body['recurrence'] = [recorrencia]
+        else:
+            event_body['recurrence'] = []
+            
+        calendar_id = get_calendar_id()
+        print(f"[Google Calendar] Updating event '{google_event_id}' in Google Calendar ({calendar_id})...")
+        service.events().patch(calendarId=calendar_id, eventId=google_event_id, body=event_body).execute()
+        print(f"[Google Calendar] Update successful for Google Event ID: {google_event_id}")
+        return True
+    except Exception as e:
+        print(f"[Google Calendar] Error updating event: {e}")
+        return False
+
+def update_event_in_google_background(google_event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None):
+    """Runs the Google Calendar update in a background thread."""
+    t = threading.Thread(
+        target=update_event_in_google,
+        args=(google_event_id, event_title, event_date, event_time, localizacao, recorrencia)
     )
     t.daemon = True
     t.start()
@@ -171,7 +257,8 @@ def sync_calendars(db_path=None):
             if not le.get('google_event_id'):
                 g_id = push_event_to_google(
                     le['id'], le['titulo'], le['data'], le['hora'], 
-                    service=service
+                    localizacao=le.get('localizacao'), recorrencia=le.get('recorrencia'),
+                    service=service, db_path=db_path
                 )
                 if g_id:
                     # Update our reference
@@ -220,12 +307,18 @@ def sync_calendars(db_path=None):
                 event_date = start_date
                 event_time = "00:00"
                 
+            g_loc = g_event.get('location')
+            g_rec_list = g_event.get('recurrence')
+            g_rec = g_rec_list[0] if g_rec_list else None
+                
             local_ev = local_by_google_id.get(g_id)
             if local_ev:
                 # Existing event: check if details changed and update locally if so
                 if (local_ev['titulo'] != summary or 
                     local_ev['data'] != event_date or 
-                    local_ev['hora'] != event_time):
+                    local_ev['hora'] != event_time or
+                    local_ev.get('localizacao') != g_loc or
+                    local_ev.get('recorrencia') != g_rec):
                     print(f"[Google Calendar] Updating local event ID {local_ev['id']} to match Google...")
                     update_event(
                         event_id=local_ev['id'],
@@ -235,6 +328,8 @@ def sync_calendars(db_path=None):
                         responsavel=local_ev['responsavel'],
                         cor=local_ev['cor'],
                         categoria=local_ev['categoria'],
+                        localizacao=g_loc,
+                        recorrencia=g_rec,
                         db_path=db_path
                     )
             else:
@@ -252,6 +347,18 @@ def sync_calendars(db_path=None):
                 if matched_local:
                     print(f"[Google Calendar] Matching local event ID {matched_local['id']} to Google ID {g_id}")
                     update_event_google_id(matched_local['id'], g_id, db_path)
+                    update_event(
+                        event_id=matched_local['id'],
+                        titulo=summary,
+                        data=event_date,
+                        hora=event_time,
+                        responsavel=matched_local['responsavel'],
+                        cor=matched_local['cor'],
+                        categoria=matched_local['categoria'],
+                        localizacao=g_loc,
+                        recorrencia=g_rec,
+                        db_path=db_path
+                    )
                 else:
                     # New event from Google
                     print(f"[Google Calendar] Creating new local event '{summary}' from Google...")
@@ -263,6 +370,8 @@ def sync_calendars(db_path=None):
                         cor='#2ed573',  # Green color for Google Calendar events
                         categoria='Familiar',
                         google_event_id=g_id,
+                        localizacao=g_loc,
+                        recorrencia=g_rec,
                         db_path=db_path
                     )
                     

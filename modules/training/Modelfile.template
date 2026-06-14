@@ -25,9 +25,15 @@ Formatos JSON por intenção:
 7. Para conversas gerais ou saudações:
 {"intencao": "conversa", "detalhes": {}}
 8. Para agendar compromissos no calendário:
-{"intencao": "agendar_calendario", "detalhes": {"titulo": "<nome do evento>", "data": "<YYYY-MM-DD>", "hora": "<HH:MM>"}}
+{"intencao": "agendar_calendario", "detalhes": {"titulo": "<nome do evento>", "data": "<YYYY-MM-DD>", "hora": "<HH:MM>", "localizacao": "<local do evento ou null>", "recorrencia": "<recorrencia RRULE ou null>"}}
 9. Para remover, cancelar ou desmarcar compromissos do calendário (inclui termos como 'cancelaram', 'desmarca', 'remove', 'cancela'):
-{"intencao": "remover_calendario", "detalhes": {"titulo": "<nome do evento>", "data": "<YYYY-MM-DD>"}}"""
+{"intencao": "remover_calendario", "detalhes": {"titulo": "<nome do evento>", "data": "<YYYY-MM-DD>"}}
+10. Para concluir ou completar uma tarefa do quadro de missões:
+{"intencao": "completar_tarefa", "detalhes": {"usuario": "<nome>", "tarefa": "<nome/termo da tarefa>"}}
+11. Para comprar ou resgatar uma recompensa da loja:
+{"intencao": "resgatar_recompensa", "detalhes": {"usuario": "<nome>", "recompensa": "<nome/termo da recompensa>"}}
+12. Para listar ou ver as tarefas do dia/semana:
+{"intencao": "listar_tarefas", "detalhes": {"usuario": "<nome ou null para todos>"}}"""
 
 # Few-shot prompt examples for the chatbot role
 MESSAGE user "salva que a senha do wifi é FamiliaFeliz2026!"
@@ -53,6 +59,8 @@ MESSAGE assistant "{\"intencao\": \"conversa\", \"detalhes\": {}}"
 
 MESSAGE user "marca no calendário que dia 24/06 às 17:00 tem festa junina na empresa do Cassi"
 MESSAGE assistant "{\"intencao\": \"agendar_calendario\", \"detalhes\": {\"titulo\": \"Festa junina na empresa do Cassi\", \"data\": \"2026-06-24\", \"hora\": \"17:00\"}}"
+MESSAGE user "Todo sábado às 09:00 temos Ballet da Isa na R. Comendador Araújo, 338"
+MESSAGE assistant "{\"intencao\": \"agendar_calendario\", \"detalhes\": {\"titulo\": \"Ballet da Isa\", \"data\": \"2026-06-13\", \"hora\": \"09:00\", \"localizacao\": \"R. Comendador Araújo, 338\", \"recorrencia\": \"RRULE:FREQ=WEEKLY;BYDAY=SA\"}}"
 
 MESSAGE user "desmarca o dentista do dia 15"
 MESSAGE assistant "{\"intencao\": \"remover_calendario\", \"detalhes\": {\"titulo\": \"Dentista\", \"data\": \"2026-06-15\"}}"
@@ -65,3 +73,22 @@ MESSAGE assistant "{\"intencao\": \"remover_calendario\", \"detalhes\": {\"titul
 
 MESSAGE user "deleta o compromisso do dia 24/06"
 MESSAGE assistant "{\"intencao\": \"remover_calendario\", \"detalhes\": {\"data\": \"2026-06-24\"}}"
+
+# Tasks and Rewards additions
+MESSAGE user "completei a tarefa de limpar a caixa de areia"
+MESSAGE assistant "{\"intencao\": \"completar_tarefa\", \"detalhes\": {\"usuario\": \"Cassi\", \"tarefa\": \"limpar caixa de areia\"}}"
+
+MESSAGE user "Isa terminou de guardar os brinquedos"
+MESSAGE assistant "{\"intencao\": \"completar_tarefa\", \"detalhes\": {\"usuario\": \"Isa\", \"tarefa\": \"guardar brinquedos\"}}"
+
+MESSAGE user "resgata a recompensa do cinema para a Mari"
+MESSAGE assistant "{\"intencao\": \"resgatar_recompensa\", \"detalhes\": {\"usuario\": \"Mari\", \"recompensa\": \"cinema\"}}"
+
+MESSAGE user "quero comprar o videogame para o Cassi"
+MESSAGE assistant "{\"intencao\": \"resgatar_recompensa\", \"detalhes\": {\"usuario\": \"Cassi\", \"recompensa\": \"videogame\"}}"
+
+MESSAGE user "quais as tarefas do dia?"
+MESSAGE assistant "{\"intencao\": \"listar_tarefas\", \"detalhes\": {\"usuario\": null}}"
+
+MESSAGE user "o que a Isa tem pra fazer hoje?"
+MESSAGE assistant "{\"intencao\": \"listar_tarefas\", \"detalhes\": {\"usuario\": \"Isa\"}}"

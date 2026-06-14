@@ -27,11 +27,13 @@ Agenda dinâmica integrada para coordenar a rotina do lar.
 * Diferenciação visual entre tarefas coletivas e individuais.
 * Visualização limpa com marcação por cores de quem é responsável por cada tarefa.
 
-### 🎮 To-Do List Gamer
-Transforma tarefas domésticas chatas em uma divertida jornada de RPG (Role-Playing Game).
-* **Quests Ativas**: Louça, lixo ou faxina geram XP e Ouro Virtual.
-* **Evolução**: Níveis de personagem e classes (ex: Guardiões do Lar).
-* **Loja de Recompensas**: Moedas de ouro conquistadas podem ser trocadas por prêmios reais combinados em família (ex: escolher a pizza de sexta, tempo extra de videogame).
+### 🎮 To-Do List Gamer (Gamificação com Perfis e Regras FlyLady)
+Transforma as tarefas domésticas da casa em uma jornada divertida de RPG (Role-Playing Game).
+* **Perfis Personalizados**: 3 jogadores cadastrados: **Mari** (Guardiã da Organização), **Cassi** (Guerreiro da Limpeza) e **Isa** (Pequena Aprendiz, 5 anos), com regras de pontuação adaptadas e progresso individual.
+* **Tarefas Inteligentes (Método FlyLady)**: Chores gerados dinamicamente seguindo o método FlyLady (Bênção Semanal, Rotinas Diárias, Passos de Bebê para Isa), ajustados automaticamente às restrições dos membros (trabalho presencial do Cassi, quarta-feira fora da Mari, escola e atividades da Isa).
+* **Integração com Calendário**: As quests ativas são sincronizadas automaticamente como eventos no calendário familiar, ganhando um checkmark (`✅`) no título assim que completadas.
+* **Resgate de Recompensas**: Loja de itens com preços em ouro virtual, permitindo que cada usuário troque seu ouro por recompensas customizadas (ex: SPA para Mari, Videogame para Cassi, Desenhos/Tablet para Isa).
+* **NLU Conversacional**: Conclusão de tarefas e resgate de recompensas podem ser feitos digitando comandos diretamente no chat (ex: *"completei a tarefa de limpar a caixa de areia"* ou *"Isa quer comprar a recompensa de historinha"*), com fallback local offline robusto.
 
 ---
 

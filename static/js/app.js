@@ -4,6 +4,7 @@
 let gamerState = null;
 let calendarEvents = [];
 let lastUserMessage = "";
+let activeGamerMember = "Mari";
 
 
 // ==========================================================================
@@ -942,19 +943,186 @@ function renderEventsList() {
         const dateParts = evt.date.split('-');
         const dateFormatted = `${dateParts[2]}/${dateParts[1]}`;
         
+        let metaHtml = `
+            <span>🕒 ${evt.time}</span>
+            <span>📅 ${dateFormatted}</span>
+            <span>👤 ${evt.user}</span>
+        `;
+        if (evt.localizacao) {
+            metaHtml += `<span style="display: block; margin-top: 4px; font-size: 0.75rem; color: rgba(255,255,255,0.75);">📍 ${evt.localizacao}</span>`;
+        }
+        
+        let recurrenceBadge = '';
+        if (evt.recorrencia) {
+            let label = 'Repete';
+            if (evt.recorrencia.includes('FREQ=WEEKLY')) {
+                const day_map = {
+                    "MO": "seg",
+                    "TU": "ter",
+                    "WE": "qua",
+                    "TH": "qui",
+                    "FR": "sex",
+                    "SA": "sáb",
+                    "SU": "dom"
+                };
+                let day_found = null;
+                for (let code in day_map) {
+                    if (evt.recorrencia.includes(`BYDAY=${code}`)) {
+                        day_found = day_map[code];
+                        break;
+                    }
+                }
+                label = day_found ? `Semanal (${day_found})` : 'Semanal';
+            }
+            recurrenceBadge = `<span class="tag-difficulty" style="background-color: rgba(255,255,255,0.1); color: #fff; margin-left: 4px;">🔁 ${label}</span>`;
+        }
+        
         card.innerHTML = `
-            <div class="event-card-header">
-                <span class="event-card-title">${evt.title}</span>
-                <span class="tag-difficulty" style="background-color: ${evt.color}20; color: ${evt.color}">${evt.category}</span>
+            <div class="event-card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span class="event-card-title" style="font-weight: 600;">${evt.title}</span>
+                    <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                        <span class="tag-difficulty" style="background-color: ${evt.color}20; color: ${evt.color}">${evt.category}</span>
+                        ${recurrenceBadge}
+                    </div>
+                </div>
+                <div class="card-actions" style="opacity: 0.8; display: flex; gap: 6px; align-self: flex-start;">
+                    <button class="btn-event-edit" title="Editar Evento" style="background: none; border: none; cursor: pointer; padding: 2px; font-size: 0.8rem;">✏️</button>
+                    <button class="btn-event-delete" title="Excluir Evento" style="background: none; border: none; cursor: pointer; padding: 2px; font-size: 0.8rem;">🗑️</button>
+                </div>
             </div>
-            <div class="event-card-meta">
-                <span>🕒 ${evt.time}</span>
-                <span>📅 ${dateFormatted}</span>
-                <span>👤 ${evt.user}</span>
+            <div class="event-card-meta" style="margin-top: 8px;">
+                ${metaHtml}
             </div>
         `;
+        
+        card.querySelector('.btn-event-edit').addEventListener('click', () => openEventModal(evt));
+        card.querySelector('.btn-event-delete').addEventListener('click', () => confirmDeleteEvent(evt));
+        
         listContainer.appendChild(card);
     });
+}
+
+function openEventModal(event = null) {
+    const modal = document.getElementById('event-modal');
+    const title = document.getElementById('event-modal-title');
+    const form = document.getElementById('event-form');
+    
+    const idInput = document.getElementById('edit-event-id');
+    const titleInput = document.getElementById('edit-event-title');
+    const dateInput = document.getElementById('edit-event-date');
+    const timeInput = document.getElementById('edit-event-time');
+    const userInput = document.getElementById('edit-event-user');
+    const catSelect = document.getElementById('edit-event-category');
+    const locInput = document.getElementById('edit-event-location');
+    const recSelect = document.getElementById('edit-event-recurrence');
+    const colorInput = document.getElementById('edit-event-color');
+    
+    form.reset();
+    
+    if (event) {
+        title.textContent = "Editar Compromisso";
+        idInput.value = event.id;
+        titleInput.value = event.title;
+        dateInput.value = event.date;
+        timeInput.value = event.time;
+        userInput.value = event.user;
+        catSelect.value = event.category;
+        locInput.value = event.localizacao || '';
+        recSelect.value = event.recorrencia || '';
+        colorInput.value = event.color || '#5f27cd';
+    } else {
+        title.textContent = "Novo Compromisso";
+        idInput.value = '';
+        colorInput.value = '#5f27cd';
+        
+        // Default date to today's date in YYYY-MM-DD
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
+        timeInput.value = "12:00";
+    }
+    
+    modal.classList.add('active');
+}
+
+function closeEventModal() {
+    const modal = document.getElementById('event-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+async function handleSaveEvent(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('edit-event-id').value;
+    const titulo = document.getElementById('edit-event-title').value.trim();
+    const dateVal = document.getElementById('edit-event-date').value;
+    const timeVal = document.getElementById('edit-event-time').value;
+    const userVal = document.getElementById('edit-event-user').value;
+    const categoria = document.getElementById('edit-event-category').value;
+    const localizacao = document.getElementById('edit-event-location').value.trim();
+    const recorrencia = document.getElementById('edit-event-recurrence').value;
+    const cor = document.getElementById('edit-event-color').value;
+    
+    if (!titulo || !dateVal || !timeVal) {
+        showToast("Por favor, preencha todos os campos obrigatórios.", "warning");
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/calendario/salvar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: id ? parseInt(id) : null,
+                titulo,
+                data: dateVal,
+                hora: timeVal,
+                responsavel: userVal,
+                categoria,
+                localizacao,
+                recorrencia,
+                cor
+            })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast(data.message, "success");
+            closeEventModal();
+            fetchCalendarData();
+        } else {
+            showToast(`Erro: ${data.error}`, "warning");
+        }
+    } catch (err) {
+        console.error("Error saving event:", err);
+        showToast("Erro de rede ao salvar compromisso.", "warning");
+    }
+}
+
+async function confirmDeleteEvent(event) {
+    if (confirm(`Tem certeza que deseja desmarcar permanentemente o compromisso "${event.title}"?`)) {
+        try {
+            const res = await fetch('/api/calendario/excluir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: event.id })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                showToast("Compromisso desmarcado com sucesso!", "success");
+                fetchCalendarData();
+            } else {
+                showToast(`Erro: ${data.error}`, "warning");
+            }
+        } catch (err) {
+            console.error("Error deleting event:", err);
+            showToast("Erro de rede ao excluir compromisso.", "warning");
+        }
+    }
 }
 
 function setupCalendarListeners() {
@@ -993,35 +1161,136 @@ function setupCalendarListeners() {
             syncBtn.disabled = false;
         }
     });
+    
+    // Add Event button listener
+    const addEventBtn = document.getElementById('btn-add-event');
+    if (addEventBtn) {
+        addEventBtn.addEventListener('click', () => openEventModal());
+    }
+    
+    // Close modals
+    const cancelBtn = document.getElementById('btn-cancel-event-modal');
+    const closeBtn = document.getElementById('btn-close-event-modal');
+    if (cancelBtn) cancelBtn.addEventListener('click', closeEventModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeEventModal);
+    
+    // Form submission
+    const form = document.getElementById('event-form');
+    if (form) {
+        form.addEventListener('submit', handleSaveEvent);
+    }
 }
 
 // ==========================================================================
 // TO-DO LIST GAMER LOGIC (RF004)
 // ==========================================================================
+// ==========================================================================
+// TO-DO LIST GAMER LOGIC (RF004)
+// ==========================================================================
 function setupGamerListeners() {
-    document.getElementById('btn-reset-quests').addEventListener('click', async () => {
-        try {
-            const res = await fetch('/api/todo-gamer/reset', { method: 'POST' });
-            const data = await res.json();
-            gamerState = data.state;
+    // Reset button
+    const resetBtn = document.getElementById('btn-reset-quests');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/todo-gamer/reset', { method: 'POST' });
+                const data = await res.json();
+                gamerState = data.state;
+                updateGamerUI();
+                fetchCalendarData();
+                showToast("Missões diárias recarregadas!", "info");
+            } catch (err) {
+                showToast("Erro ao recarregar missões.", "warning");
+            }
+        });
+    }
+
+    // Circular member selector tabs
+    const gamerTabs = document.querySelectorAll('.gamer-tab');
+    gamerTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            gamerTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeGamerMember = tab.getAttribute('data-member');
             updateGamerUI();
-            showToast("Missões diárias recarregadas!", "info");
-        } catch (err) {
-            showToast("Erro ao recarregar missões.", "warning");
-        }
+        });
     });
+
+    // Reward Modal open/close
+    const addRewardBtn = document.getElementById('btn-add-reward');
+    const rewardModal = document.getElementById('reward-modal');
+    const closeRewardModalBtn = document.getElementById('btn-close-reward-modal');
+    const cancelRewardModalBtn = document.getElementById('btn-cancel-reward-modal');
+    
+    if (addRewardBtn) {
+        addRewardBtn.addEventListener('click', () => {
+            if (rewardModal) rewardModal.classList.add('active');
+        });
+    }
+    
+    const closeRewardModal = () => {
+        if (rewardModal) rewardModal.classList.remove('active');
+        const form = document.getElementById('reward-form');
+        if (form) form.reset();
+    };
+    
+    if (closeRewardModalBtn) closeRewardModalBtn.addEventListener('click', closeRewardModal);
+    if (cancelRewardModalBtn) cancelRewardModalBtn.addEventListener('click', closeRewardModal);
+
+    // Reward Form Submission
+    const rewardForm = document.getElementById('reward-form');
+    if (rewardForm) {
+        rewardForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const titulo = document.getElementById('new-reward-title').value.trim();
+            const custo = parseInt(document.getElementById('new-reward-cost').value);
+            const icone = document.getElementById('new-reward-icon').value.trim();
+            
+            if (!titulo || isNaN(custo) || !icone) {
+                showToast("Por favor, preencha todos os campos corretamente.", "warning");
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/todo-gamer/add-reward', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        usuario_nome: activeGamerMember,
+                        titulo,
+                        custo,
+                        icone
+                    })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    gamerState = data.state;
+                    updateGamerUI();
+                    closeRewardModal();
+                    showToast("Nova recompensa adicionada com sucesso!", "success");
+                } else {
+                    showToast(`Erro: ${data.error}`, "warning");
+                }
+            } catch (err) {
+                showToast("Erro ao criar nova recompensa.", "warning");
+            }
+        });
+    }
 }
 
 function updateGamerUI() {
-    if (!gamerState) return;
+    if (!gamerState || !gamerState.profiles) return;
     
-    const char = gamerState.character;
+    // Find active user profile
+    const char = gamerState.profiles.find(p => p.nome.toLowerCase() === activeGamerMember.toLowerCase()) || gamerState.character;
+    if (!char) return;
     
     // 1. Profile Header
     document.getElementById('gamer-avatar').textContent = char.avatar;
-    document.getElementById('gamer-name').textContent = char.name;
-    document.getElementById('gamer-class').textContent = `Classe: ${char.class}`;
-    document.getElementById('gamer-level').textContent = char.level;
+    document.getElementById('gamer-name').textContent = char.nome;
+    document.getElementById('gamer-class').textContent = `Classe: ${char.classe}`;
+    document.getElementById('gamer-level').textContent = char.nivel;
     document.getElementById('gamer-gold').textContent = char.gold;
     
     // XP Progress Bar
@@ -1033,52 +1302,72 @@ function updateGamerUI() {
     const questsContainer = document.getElementById('quests-list');
     questsContainer.innerHTML = '';
     
-    gamerState.quests.forEach(quest => {
-        const card = document.createElement('div');
-        card.className = `quest-card ${quest.completed ? 'completed' : ''}`;
-        
-        const actionHtml = quest.completed 
-            ? `<span class="quest-status-checked">⭐ Concluída</span>` 
-            : `<button class="btn-complete" onclick="completeQuest(${quest.id})">Concluir</button>`;
+    // Filter quests for the active member
+    const memberQuests = gamerState.quests.filter(q => q.usuario_nome.toLowerCase() === activeGamerMember.toLowerCase());
+    
+    if (memberQuests.length === 0) {
+        questsContainer.innerHTML = '<div class="vault-empty">Nenhuma missão ativa para este membro hoje.</div>';
+    } else {
+        memberQuests.forEach(quest => {
+            const card = document.createElement('div');
+            card.className = `quest-card ${quest.completed ? 'completed' : ''}`;
             
-        card.innerHTML = `
-            <div class="quest-details">
-                <span class="quest-title">${quest.title}</span>
-                <div class="quest-meta">
-                    <span class="tag-difficulty">${quest.difficulty}</span>
-                    <span class="tag-difficulty">${quest.category}</span>
-                    <div class="rewards-pills-row">
-                        <span class="xp-pill">🔵 +${quest.reward_xp} XP</span>
-                        <span class="gold-pill">🪙 +${quest.reward_gold} Gold</span>
+            const actionHtml = quest.completed 
+                ? `<span class="quest-status-checked">⭐ Concluída</span>` 
+                : `<button class="btn-complete" onclick="completeQuest(${quest.id})">Concluir</button>`;
+                
+            card.innerHTML = `
+                <div class="quest-details">
+                    <span class="quest-title">${quest.titulo}</span>
+                    <div class="quest-meta">
+                        <span class="tag-difficulty">${quest.dificuldade}</span>
+                        <span class="tag-difficulty">${quest.categoria}</span>
+                        <div class="rewards-pills-row">
+                            <span class="xp-pill">🔵 +${quest.reward_xp} XP</span>
+                            <span class="gold-pill">🪙 +${quest.reward_gold} Gold</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="quest-actions">
-                ${actionHtml}
-            </div>
-        `;
-        questsContainer.appendChild(card);
-    });
+                <div class="quest-actions">
+                    ${actionHtml}
+                </div>
+            `;
+            questsContainer.appendChild(card);
+        });
+    }
     
     // 3. Reward Shop Items
     const rewardsContainer = document.getElementById('rewards-list');
     rewardsContainer.innerHTML = '';
     
-    gamerState.rewards.forEach(rew => {
-        const card = document.createElement('div');
-        card.className = 'reward-card';
-        card.innerHTML = `
-            <div class="reward-info-group">
-                <span class="reward-card-icon">${rew.icon}</span>
-                <div class="reward-card-details">
-                    <span class="reward-card-title">${rew.title}</span>
-                    <span class="reward-card-cost">🪙 ${rew.cost} Ouro</span>
+    // Filter rewards for the active member
+    const memberRewards = gamerState.rewards.filter(r => r.usuario_nome.toLowerCase() === activeGamerMember.toLowerCase());
+    
+    if (memberRewards.length === 0) {
+        rewardsContainer.innerHTML = '<div class="vault-empty">Nenhuma recompensa cadastrada. Crie uma acima!</div>';
+    } else {
+        memberRewards.forEach(rew => {
+            const card = document.createElement('div');
+            card.className = `reward-card ${rew.resgatado ? 'completed' : ''}`;
+            card.style.opacity = rew.resgatado ? '0.5' : '1';
+            
+            const btnHtml = rew.resgatado 
+                ? `<span class="quest-status-checked" style="font-size: 0.75rem;">🎁 Resgatado</span>`
+                : `<button class="btn-redeem" onclick="redeemReward(${rew.id}, ${rew.custo}, '${rew.titulo}')">Resgatar</button>`;
+                
+            card.innerHTML = `
+                <div class="reward-info-group">
+                    <span class="reward-card-icon">${rew.icone}</span>
+                    <div class="reward-card-details">
+                        <span class="reward-card-title">${rew.titulo}</span>
+                        <span class="reward-card-cost">🪙 ${rew.custo} Ouro</span>
+                    </div>
                 </div>
-            </div>
-            <button class="btn-redeem" onclick="redeemReward(${rew.id}, ${rew.cost}, '${rew.title}')">Resgatar</button>
-        `;
-        rewardsContainer.appendChild(card);
-    });
+                ${btnHtml}
+            `;
+            rewardsContainer.appendChild(card);
+        });
+    }
 }
 
 // Global scope handlers for onClick attributes in generated HTML
@@ -1098,14 +1387,16 @@ window.completeQuest = async function(questId) {
         
         gamerState = data.state;
         updateGamerUI();
+        fetchCalendarData(); // Refresh calendar checks
         
         // Show success rewards toast
         showToast(`Quest Concluída! Ganhou +${data.reward_xp} XP e +${data.reward_gold} Ouro! ⚔️`, "success");
         
-        // If leveled up, show level up notification
-        if (data.leveled_up) {
+        // Find if user leveled up
+        const activeChar = gamerState.profiles.find(p => p.nome.toLowerCase() === activeGamerMember.toLowerCase());
+        if (data.leveled_up && activeChar) {
             setTimeout(() => {
-                showToast(`🎉 PARABÉNS! A família subiu para o Nível ${gamerState.character.level}! ✨ Novos poderes liberados!`, "success");
+                showToast(`🎉 PARABÉNS! ${activeChar.nome} subiu para o Nível ${activeChar.nivel}! ✨ Novos poderes liberados!`, "success");
             }, 1000);
         }
     } catch (err) {
@@ -1113,19 +1404,36 @@ window.completeQuest = async function(questId) {
     }
 };
 
-window.redeemReward = function(rewardId, cost, title) {
+window.redeemReward = async function(rewardId, cost, title) {
     if (!gamerState) return;
     
-    const char = gamerState.character;
+    const char = gamerState.profiles.find(p => p.nome.toLowerCase() === activeGamerMember.toLowerCase());
+    if (!char) return;
+    
     if (char.gold < cost) {
         showToast(`🪙 Ouro insuficiente para resgatar "${title}"! Falta ${cost - char.gold} de ouro.`, "warning");
         return;
     }
     
-    // Deduct locally and show purchase confirmation toast
-    char.gold -= cost;
-    updateGamerUI();
-    showToast(`🛒 Recompensa "${title}" resgatada com sucesso! Código de resgate gerado. Divirta-se! 🎮`, "success");
+    try {
+        const res = await fetch('/api/todo-gamer/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reward_id: rewardId })
+        });
+        const data = await res.json();
+        
+        if (data.error) {
+            showToast(data.error, "warning");
+            return;
+        }
+        
+        gamerState = data.state;
+        updateGamerUI();
+        showToast(`🛒 Recompensa "${title}" resgatada com sucesso! Divirta-se! 🎮`, "success");
+    } catch (err) {
+        showToast("Erro ao resgatar recompensa.", "warning");
+    }
 };
 
 // ==========================================================================
