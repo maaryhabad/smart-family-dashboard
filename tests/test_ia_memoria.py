@@ -1090,6 +1090,13 @@ class TestRecipesAndChoreDivision(unittest.TestCase):
         self.assertIn("1 xícara de aveia", res['ingredientes'])
         self.assertIn("Bater tudo e fritar", res['passo_a_passo'])
 
+        # Test conversational prefix
+        msg_conv = "salva essa receita Pãozinho Rápido de Aveia na Air Fryer. Ingredientes: 1 xícara de farinha. Modo de preparo: Misturar tudo."
+        res_conv = parse_recipe_details(msg_conv)
+        self.assertIsNotNone(res_conv)
+        self.assertEqual(res_conv['nome'].lower(), "pãozinho rápido de aveia na air fryer")
+        self.assertIn("1 xícara de farinha", res_conv['ingredientes'])
+
     def test_chat_salvar_receita(self):
         response = self.client.post('/api/ia-memoria/chat', json={
             "message": "salvar receita bolo de caneca: ingredientes: 1 ovo, 2 colheres de cacau. passo a passo: misturar e colocar no microondas"
@@ -1141,20 +1148,213 @@ class TestRecipesAndChoreDivision(unittest.TestCase):
         
         tasks = get_all_tasks(TEST_DB_PATH)
         
+        # Isa's tasks
         isa_trash = [t for t in tasks if t['usuario_nome'] == 'Isa' and 'lixo do banheiro' in t['titulo'].lower()]
-        self.assertEqual(len(isa_trash), 1)
+        self.assertEqual(len(isa_trash), 2)
         
-        cassi_aspirador = [t for t in tasks if t['usuario_nome'] == 'Cassi' and 'passar aspirador' in t['titulo'].lower()]
-        self.assertEqual(len(cassi_aspirador), 1)
+        # Shared Cassi and Mari split
+        cassi_tasks = [t for t in tasks if t['usuario_nome'] == 'Cassi']
+        mari_tasks = [t for t in tasks if t['usuario_nome'] == 'Mari']
         
-        mari_pano = [t for t in tasks if t['usuario_nome'] == 'Mari' and 'passar pano' in t['titulo'].lower()]
-        self.assertEqual(len(mari_pano), 1)
+        # Cassi and Mari tasks sum to 31
+        self.assertEqual(len(cassi_tasks) + len(mari_tasks), 31)
         
-        cassi_laundry = [t for t in tasks if t['usuario_nome'] == 'Cassi' and 'lavar roupa' in t['titulo'].lower()]
-        self.assertEqual(len(cassi_laundry), 1)
+        # 50/50 division: one must have 15, the other 16
+        self.assertTrue(len(cassi_tasks) in (15, 16))
+        self.assertTrue(len(mari_tasks) in (15, 16))
+
+
+class TestTaskManagement(unittest.TestCase):
+    def setUp(self):
+        from modules.ia_memoria import database
+        self.old_db_path = database.DATABASE_PATH
+        database.DATABASE_PATH = TEST_DB_PATH
         
-        mari_laundry = [t for t in tasks if t['usuario_nome'] == 'Mari' and 'lavar roupa' in t['titulo'].lower()]
-        self.assertEqual(len(mari_laundry), 1)
+        import gc
+        gc.collect()
+        try:
+            if os.path.exists(TEST_DB_PATH):
+                os.remove(TEST_DB_PATH)
+        except PermissionError:
+            pass
+            
+        force_clean_db(TEST_DB_PATH)
+        init_db(TEST_DB_PATH)
+        self.client = app.test_client()
+        
+    def tearDown(self):
+        from modules.ia_memoria import database
+        database.DATABASE_PATH = self.old_db_path
+        
+        import gc
+        gc.collect()
+        try:
+            if os.path.exists(TEST_DB_PATH):
+                os.remove(TEST_DB_PATH)
+        except PermissionError:
+            pass
+
+    def test_create_task_api(self):
+        response = self.client.post('/api/todo-gamer/salvar', json={
+            "usuario_nome": "Mari",
+            "titulo": "Lavar a louça teste",
+            "categoria": "Limpeza",
+            "dificuldade": "Fácil",
+            "reward_xp": 10,
+            "reward_gold": 3,
+            "data": "2026-06-14",
+            "hora": "18:00"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["message"], "Missão criada com sucesso!")
+        
+        # Verify it is in database
+        from modules.ia_memoria.database import get_all_tasks, get_all_events
+        tasks = get_all_tasks(TEST_DB_PATH)
+        new_task = next((t for t in tasks if t['titulo'] == "Lavar a louça teste"), None)
+        self.assertIsNotNone(new_task)
+        self.assertEqual(new_task['usuario_nome'], "Mari")
+        self.assertEqual(new_task['reward_xp'], 10)
+        self.assertEqual(new_task['reward_gold'], 3)
+        self.assertEqual(new_task['data'], "2026-06-14")
+        self.assertEqual(new_task['hora'], "18:00")
+        
+        # Verify it has a linked event
+        self.assertIsNotNone(new_task['evento_calendario_id'])
+        events = get_all_events(TEST_DB_PATH)
+        linked_evt = next((e for e in events if e['id'] == new_task['evento_calendario_id']), None)
+        self.assertIsNotNone(linked_evt)
+        self.assertEqual(linked_evt['titulo'], "Tarefa Mari: Lavar a louça teste")
+        self.assertEqual(linked_evt['data'], "2026-06-14")
+        self.assertEqual(linked_evt['hora'], "18:00")
+
+    def test_update_task_api(self):
+        from modules.ia_memoria.database import save_task, get_all_tasks, get_all_events
+        task_id = save_task(
+            usuario_nome="Isa",
+            titulo="Brinquedos teste",
+            categoria="Infantil",
+            dificuldade="Fácil",
+            reward_xp=10,
+            reward_gold=3,
+            data="2026-06-14",
+            hora="19:00",
+            db_path=TEST_DB_PATH
+        )
+        
+        response = self.client.post('/api/todo-gamer/salvar', json={
+            "id": task_id,
+            "usuario_nome": "Cassi",
+            "titulo": "Brinquedos teste atualizado",
+            "categoria": "Organização",
+            "dificuldade": "Médio",
+            "reward_xp": 15,
+            "reward_gold": 5,
+            "data": "2026-06-15",
+            "hora": "10:00"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["message"], "Missão atualizada com sucesso!")
+        
+        tasks = get_all_tasks(TEST_DB_PATH)
+        updated_task = next((t for t in tasks if t['id'] == task_id), None)
+        self.assertIsNotNone(updated_task)
+        self.assertEqual(updated_task['usuario_nome'], "Cassi")
+        self.assertEqual(updated_task['titulo'], "Brinquedos teste atualizado")
+        self.assertEqual(updated_task['categoria'], "Organização")
+        self.assertEqual(updated_task['dificuldade'], "Médio")
+        self.assertEqual(updated_task['reward_xp'], 15)
+        self.assertEqual(updated_task['reward_gold'], 5)
+        self.assertEqual(updated_task['data'], "2026-06-15")
+        self.assertEqual(updated_task['hora'], "10:00")
+        
+        # Verify event was updated
+        events = get_all_events(TEST_DB_PATH)
+        linked_evt = next((e for e in events if e['id'] == updated_task['evento_calendario_id']), None)
+        self.assertIsNotNone(linked_evt)
+        self.assertEqual(linked_evt['titulo'], "Tarefa Cassi: Brinquedos teste atualizado")
+        self.assertEqual(linked_evt['responsavel'], "Cassi")
+        self.assertEqual(linked_evt['categoria'], "Organização")
+        self.assertEqual(linked_evt['data'], "2026-06-15")
+        self.assertEqual(linked_evt['hora'], "10:00")
+
+    def test_delete_task_api(self):
+        from modules.ia_memoria.database import save_task, get_all_tasks, get_all_events
+        task_id = save_task(
+            usuario_nome="Isa",
+            titulo="Brinquedos teste deletar",
+            categoria="Infantil",
+            dificuldade="Fácil",
+            reward_xp=10,
+            reward_gold=3,
+            data="2026-06-14",
+            hora="19:00",
+            db_path=TEST_DB_PATH
+        )
+        
+        tasks = get_all_tasks(TEST_DB_PATH)
+        task = next((t for t in tasks if t['id'] == task_id), None)
+        self.assertIsNotNone(task)
+        evt_id = task['evento_calendario_id']
+        
+        response = self.client.post('/api/todo-gamer/excluir', json={
+            "id": task_id
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        
+        # Verify it is deleted from both tables
+        tasks_after = get_all_tasks(TEST_DB_PATH)
+        self.assertFalse(any(t['id'] == task_id for t in tasks_after))
+        
+        events_after = get_all_events(TEST_DB_PATH)
+        self.assertFalse(any(e['id'] == evt_id for e in events_after))
+
+    def test_task_rollover_bonuses(self):
+        from modules.ia_memoria.database import save_task, get_tasks_for_user, complete_task_in_db, get_user_by_name
+        import datetime
+        
+        # 1. Create a task in the past (e.g. 3 days ago)
+        today = datetime.date.today()
+        three_days_ago = (today - datetime.timedelta(days=3)).strftime('%Y-%m-%d')
+        
+        task_id = save_task(
+            usuario_nome="Mari",
+            titulo="Quest Antiga Acumulada",
+            categoria="Limpeza",
+            dificuldade="Fácil",
+            reward_xp=10,
+            reward_gold=1,
+            data=three_days_ago,
+            hora="12:00",
+            db_path=TEST_DB_PATH
+        )
+        
+        # 2. Fetch tasks for Mari and verify the dynamic rollover bonus is calculated:
+        # Base: 10 XP, 1 Gold. Overdue: 3 days.
+        # Bonus: 3 * 2 = 6 XP, 3 * 1 = 3 Gold.
+        # Expected total: 16 XP, 4 Gold.
+        mari_tasks = get_tasks_for_user("Mari", TEST_DB_PATH)
+        task = next(t for t in mari_tasks if t['id'] == task_id)
+        self.assertEqual(task['reward_xp'], 16)
+        self.assertEqual(task['reward_gold'], 4)
+        self.assertEqual(task['overdue_days'], 3)
+        
+        # 3. Complete the task and verify the user stats reflect the increased rewards:
+        # Before completion, Mari has 0 XP and 0 Gold.
+        mari_profile_before = get_user_by_name("Mari", TEST_DB_PATH)
+        self.assertEqual(mari_profile_before['xp'], 0)
+        self.assertEqual(mari_profile_before['gold'], 0)
+        
+        success, user_profile, leveled_up = complete_task_in_db(task_id, TEST_DB_PATH)
+        self.assertTrue(success)
+        self.assertEqual(user_profile['xp'], 16)
+        self.assertEqual(user_profile['gold'], 4)
 
 
 if __name__ == '__main__':

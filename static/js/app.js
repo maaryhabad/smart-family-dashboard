@@ -907,8 +907,8 @@ function renderCalendarGrid(year, month) {
         dayNumSpan.textContent = day;
         dayDiv.appendChild(dayNumSpan);
         
-        // Check for events on this day and add color dots
-        const dayEvents = calendarEvents.filter(e => e.date === dayString);
+        // Check for events on this day and add color dots (excluding tasks)
+        const dayEvents = calendarEvents.filter(e => !e.is_task && e.date === dayString);
         if (dayEvents.length > 0) {
             const dotsContainer = document.createElement('div');
             dotsContainer.className = 'day-events-dots';
@@ -1052,8 +1052,8 @@ function renderEventsList() {
     // 2. RENDER TODAY'S TASKS (Missões de Hoje)
     // ----------------------------------------------------
     if (tasksListContainer) {
-        // Filter tasks scheduled for today (date === todayStr)
-        const todayTasks = calendarEvents.filter(evt => evt.is_task && evt.date === todayStr);
+        // Filter tasks scheduled for today or uncompleted past tasks
+        const todayTasks = calendarEvents.filter(evt => evt.is_task && (evt.date === todayStr || (evt.date < todayStr && !evt.completed)));
         
         // Sort by time
         todayTasks.sort((a, b) => a.time.localeCompare(b.time));
@@ -1065,9 +1065,10 @@ function renderEventsList() {
                 const card = document.createElement('div');
                 card.className = `event-card task-card ${evt.completed ? 'completed' : ''}`;
                 
-                const statusIcon = evt.completed ? '✅' : '⏳';
-                const statusText = evt.completed ? 'Concluída' : 'Pendente';
-                const statusClass = evt.completed ? 'text-green' : 'text-highlight';
+                const isOverdue = evt.date < todayStr;
+                const statusIcon = evt.completed ? '✅' : (isOverdue ? '⚠️' : '⏳');
+                const statusText = evt.completed ? 'Concluída' : (isOverdue ? 'Acumulada' : 'Pendente');
+                const statusClass = evt.completed ? 'text-green' : (isOverdue ? 'text-red' : 'text-highlight');
                 
                 card.innerHTML = `
                     <div class="event-card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -1364,6 +1365,101 @@ function setupGamerListeners() {
             }
         });
     }
+
+    // Quest Modal open/close
+    const addQuestBtn = document.getElementById('btn-add-quest');
+    const questModal = document.getElementById('quest-modal');
+    const closeQuestModalBtn = document.getElementById('btn-close-quest-modal');
+    const cancelQuestModalBtn = document.getElementById('btn-cancel-quest-modal');
+    
+    if (addQuestBtn) {
+        addQuestBtn.addEventListener('click', () => openQuestModal());
+    }
+    
+    const closeQuestModal = () => {
+        if (questModal) questModal.classList.remove('active');
+        const form = document.getElementById('quest-form');
+        if (form) form.reset();
+    };
+    
+    if (closeQuestModalBtn) closeQuestModalBtn.addEventListener('click', closeQuestModal);
+    if (cancelQuestModalBtn) cancelQuestModalBtn.addEventListener('click', closeQuestModal);
+
+    // Quest Form difficulty auto-suggest values
+    const diffSelect = document.getElementById('edit-quest-difficulty');
+    if (diffSelect) {
+        diffSelect.addEventListener('change', () => {
+            const diff = diffSelect.value;
+            const xpInput = document.getElementById('edit-quest-xp');
+            const goldInput = document.getElementById('edit-quest-gold');
+            if (diff === 'Fácil') {
+                xpInput.value = 10;
+                goldInput.value = 1;
+            } else if (diff === 'Médio') {
+                xpInput.value = 15;
+                goldInput.value = 3;
+            } else if (diff === 'Difícil') {
+                xpInput.value = 25;
+                goldInput.value = 5;
+            } else if (diff === 'Ultra') {
+                xpInput.value = 40;
+                goldInput.value = 10;
+            }
+        });
+    }
+
+    // Quest Form Submission
+    const questForm = document.getElementById('quest-form');
+    if (questForm) {
+        questForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const idVal = document.getElementById('edit-quest-id').value;
+            const titulo = document.getElementById('edit-quest-title').value.trim();
+            const user = document.getElementById('edit-quest-user').value;
+            const category = document.getElementById('edit-quest-category').value;
+            const difficulty = document.getElementById('edit-quest-difficulty').value;
+            const dateVal = document.getElementById('edit-quest-date').value;
+            const timeVal = document.getElementById('edit-quest-time').value;
+            const xpVal = parseInt(document.getElementById('edit-quest-xp').value);
+            const goldVal = parseInt(document.getElementById('edit-quest-gold').value);
+            
+            if (!titulo || !dateVal || !timeVal || isNaN(xpVal) || isNaN(goldVal)) {
+                showToast("Por favor, preencha todos os campos corretamente.", "warning");
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/todo-gamer/salvar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: idVal ? parseInt(idVal) : null,
+                        usuario_nome: user,
+                        titulo,
+                        categoria: category,
+                        dificuldade: difficulty,
+                        reward_xp: xpVal,
+                        reward_gold: goldVal,
+                        data: dateVal,
+                        hora: timeVal
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    gamerState = data.state;
+                    updateGamerUI();
+                    closeQuestModal();
+                    fetchCalendarData();
+                    showToast(data.message, "success");
+                } else {
+                    showToast(`Erro: ${data.error}`, "warning");
+                }
+            } catch (err) {
+                showToast("Erro ao salvar missão.", "warning");
+            }
+        });
+    }
 }
 
 function updateGamerUI() {
@@ -1389,8 +1485,12 @@ function updateGamerUI() {
     const questsContainer = document.getElementById('quests-list');
     questsContainer.innerHTML = '';
     
-    // Filter quests for the active member
-    const memberQuests = gamerState.quests.filter(q => q.usuario_nome.toLowerCase() === activeGamerMember.toLowerCase());
+    // Filter quests for the active member and today's date or uncompleted past tasks
+    const todayStr = '2026-06-14';
+    const memberQuests = gamerState.quests.filter(q => 
+        q.usuario_nome.toLowerCase() === activeGamerMember.toLowerCase() &&
+        (q.data === todayStr || (q.data < todayStr && !q.completed))
+    );
     
     if (memberQuests.length === 0) {
         questsContainer.innerHTML = '<div class="vault-empty">Nenhuma missão ativa para este membro hoje.</div>';
@@ -1403,22 +1503,36 @@ function updateGamerUI() {
                 ? `<span class="quest-status-checked">⭐ Concluída</span>` 
                 : `<button class="btn-complete" onclick="completeQuest(${quest.id})">Concluir</button>`;
                 
+            const isOverdue = quest.data < todayStr && !quest.completed;
+            const overdueBadge = isOverdue ? '<span class="tag-difficulty" style="background-color: rgba(235, 94, 40, 0.15); color: #ff7675; border-color: rgba(235, 94, 40, 0.25);">⚠️ Acumulada</span>' : '';
+            
             card.innerHTML = `
                 <div class="quest-details">
                     <span class="quest-title">${quest.titulo}</span>
                     <div class="quest-meta">
                         <span class="tag-difficulty">${quest.dificuldade}</span>
                         <span class="tag-difficulty">${quest.categoria}</span>
+                        ${overdueBadge}
                         <div class="rewards-pills-row">
                             <span class="xp-pill">🔵 +${quest.reward_xp} XP</span>
                             <span class="gold-pill">🪙 +${quest.reward_gold} Gold</span>
                         </div>
                     </div>
                 </div>
-                <div class="quest-actions">
+                <div class="quest-actions" style="display: flex; align-items: center; gap: 8px;">
                     ${actionHtml}
+                    <div class="quest-card-controls" style="display: flex; gap: 4px;">
+                        <button class="btn-quest-edit" title="Editar Missão" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; color: white;">✏️</button>
+                        <button class="btn-quest-delete" title="Excluir Missão" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; color: white;">🗑️</button>
+                    </div>
                 </div>
             `;
+            
+            const editBtn = card.querySelector('.btn-quest-edit');
+            const deleteBtn = card.querySelector('.btn-quest-delete');
+            if (editBtn) editBtn.addEventListener('click', (e) => { e.stopPropagation(); openQuestModal(quest); });
+            if (deleteBtn) deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); confirmDeleteQuest(quest); });
+            
             questsContainer.appendChild(card);
         });
     }
@@ -1588,4 +1702,81 @@ async function checkOllamaStatus() {
         if (micBtn) micBtn.disabled = true;
     }
 }
+
+function openQuestModal(quest = null) {
+    const modal = document.getElementById('quest-modal');
+    const title = document.getElementById('quest-modal-title');
+    const form = document.getElementById('quest-form');
+    
+    const idInput = document.getElementById('edit-quest-id');
+    const titleInput = document.getElementById('edit-quest-title');
+    const userInput = document.getElementById('edit-quest-user');
+    const catSelect = document.getElementById('edit-quest-category');
+    const diffSelect = document.getElementById('edit-quest-difficulty');
+    const dateInput = document.getElementById('edit-quest-date');
+    const timeInput = document.getElementById('edit-quest-time');
+    const xpInput = document.getElementById('edit-quest-xp');
+    const goldInput = document.getElementById('edit-quest-gold');
+    
+    form.reset();
+    
+    if (quest) {
+        title.textContent = "Editar Missão";
+        idInput.value = quest.id;
+        titleInput.value = quest.titulo;
+        userInput.value = quest.usuario_nome;
+        catSelect.value = quest.categoria;
+        diffSelect.value = quest.dificuldade;
+        dateInput.value = quest.data;
+        timeInput.value = quest.hora;
+        xpInput.value = quest.reward_xp;
+        goldInput.value = quest.reward_gold;
+    } else {
+        title.textContent = "Nova Missão";
+        idInput.value = '';
+        
+        // Defaults
+        userInput.value = activeGamerMember; // Mariana, Cassi, Isa
+        catSelect.value = "Limpeza";
+        diffSelect.value = "Fácil";
+        xpInput.value = 10;
+        goldInput.value = 3;
+        
+        // Set date to current date: YYYY-MM-DD
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
+        timeInput.value = "12:00";
+    }
+    
+    modal.classList.add('active');
+}
+
+async function confirmDeleteQuest(quest) {
+    if (confirm(`Tem certeza que deseja excluir permanentemente a missão "${quest.titulo}"?`)) {
+        try {
+            const res = await fetch('/api/todo-gamer/excluir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: quest.id })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                gamerState = data.state;
+                updateGamerUI();
+                fetchCalendarData();
+                showToast("Missão excluída com sucesso!", "success");
+            } else {
+                showToast(`Erro: ${data.error}`, "warning");
+            }
+        } catch (err) {
+            console.error("Error deleting quest:", err);
+            showToast("Erro de conexão ao excluir missão.", "warning");
+        }
+    }
+}
+
 

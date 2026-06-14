@@ -190,6 +190,7 @@
                                 <span class="filter-chip" data-category="Ferramentas">🔧 Ferramentas</span>
                                 <span class="filter-chip" data-category="Organização">📦 Org.</span>
                                 <span class="filter-chip" data-category="Pets">🐱 Pets</span>
+                                <span class="filter-chip" data-category="Receitas">🍳 Receitas</span>
                                 <span class="filter-chip" data-category="Geral">📝 Geral</span>
                             </div>
                             
@@ -377,7 +378,10 @@
                             <div class="glass-panel gamer-section flex-2">
                                 <div class="section-title-row">
                                     <h3>📜 Quadro de Missões Ativas</h3>
-                                    <button class="btn btn-secondary btn-sm" id="btn-reset-quests">Recarregar Diárias</button>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-secondary btn-sm" id="btn-reset-quests">Recarregar Diárias</button>
+                                        <button class="btn btn-primary btn-sm" id="btn-add-quest" style="font-size: 0.75rem; padding: 4px 8px;">+ Nova Missão</button>
+                                    </div>
                                 </div>
                                 <div class="quests-list" id="quests-list">
                                     <!-- Dynamically injected -->
@@ -423,6 +427,7 @@
                             <option value="Ferramentas">🔧 Ferramentas</option>
                             <option value="Organização">📦 Organização</option>
                             <option value="Pets">🐱 Pets</option>
+                            <option value="Receitas">🍳 Receitas</option>
                             <option value="Geral">📝 Geral</option>
                         </select>
                     </div>
@@ -601,6 +606,86 @@
                     <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
                         <button type="button" class="btn btn-secondary" id="btn-cancel-reward-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
                         <button type="submit" class="btn btn-primary" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Criar Recompensa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Add Quest Modal -->
+    <div class="modal-overlay" id="quest-modal">
+        <div class="modal-content glass-panel" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="quest-modal-title">Nova Missão</h3>
+                <button class="btn-close-modal" id="btn-close-quest-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="quest-form" onsubmit="event.preventDefault();">
+                    <input type="hidden" id="edit-quest-id">
+                    
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="edit-quest-title" style="display:block; margin-bottom:5px; font-weight:500;">Nome da Missão</label>
+                        <input type="text" id="edit-quest-title" placeholder="Ex: Lavar louça do jantar, Aspirar sala..." required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="edit-quest-user" style="display:block; margin-bottom:5px; font-weight:500;">Responsável</label>
+                            <select id="edit-quest-user" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                                <option value="Mari">Mariana</option>
+                                <option value="Cassi">Cassi</option>
+                                <option value="Isa">Isa</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="edit-quest-category" style="display:block; margin-bottom:5px; font-weight:500;">Categoria</label>
+                            <select id="edit-quest-category" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                                <option value="Limpeza">Limpeza</option>
+                                <option value="Organização">Organização</option>
+                                <option value="Pets">Pets</option>
+                                <option value="Infantil">Infantil</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="edit-quest-difficulty" style="display:block; margin-bottom:5px; font-weight:500;">Dificuldade</label>
+                            <select id="edit-quest-difficulty" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                                <option value="Fácil">Fácil</option>
+                                <option value="Médio">Médio</option>
+                                <option value="Difícil">Difícil</option>
+                                <option value="Ultra">Ultra</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="edit-quest-date" style="display:block; margin-bottom:5px; font-weight:500;">Data</label>
+                            <input type="date" id="edit-quest-date" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="edit-quest-time" style="display:block; margin-bottom:5px; font-weight:500;">Hora</label>
+                            <input type="time" id="edit-quest-time" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="edit-quest-xp" style="display:block; margin-bottom:5px; font-weight:500;">Recompensa XP</label>
+                            <input type="number" id="edit-quest-xp" required min="1" style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="edit-quest-gold" style="display:block; margin-bottom:5px; font-weight:500;">Recompensa Gold</label>
+                            <input type="number" id="edit-quest-gold" required min="1" style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                    </div>
+
+                    <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-quest-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-save-quest-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Salvar Missão</button>
                     </div>
                 </form>
             </div>

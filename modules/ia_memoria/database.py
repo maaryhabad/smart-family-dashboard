@@ -320,35 +320,44 @@ def update_event(event_id, titulo, data, hora, responsavel='Família', cor='#5f2
     conn.close()
 def seed_tasks(db_path=None):
     import datetime
+    import random
     target_path = db_path if db_path else DATABASE_PATH
     
     # We will generate tasks for the week of June 14, 2026 (Sunday) to June 20, 2026 (Saturday)
     start_date = datetime.date(2026, 6, 14)
     
-    task_templates = [
-        # Isa
-        ('Isa', 'Guardar brinquedos no baú (FlyLady Baby Steps)', 'Infantil', 'Fácil', 10, 3, '19:30', [1, 2, 3, 4, 5]),
-        ('Isa', 'Preparar mochila escolar para amanhã', 'Infantil', 'Fácil', 10, 3, '20:00', [1, 2, 3, 4, 5]),
-        ('Isa', 'Trocar água dos gatos e limpar respingos', 'Pets', 'Fácil', 10, 3, '18:00', [0, 1, 2, 3, 4, 5, 6]),
-        ('Isa', 'Guardar sapatilhas e roupas do Ballet', 'Infantil', 'Fácil', 10, 3, '14:00', [6]),
-        ('Isa', 'Tirar o lixo do banheiro', 'Limpeza', 'Fácil', 10, 3, '18:30', [6]), # Saturday
-        
-        # Cassi
-        ('Cassi', 'Limpar caixa de areia dos gatos e repor areia', 'Pets', 'Médio', 15, 5, '08:00', [0, 1, 2, 3, 4, 5, 6]),
-        ('Cassi', 'Cuidar das plantas e horta da varanda (FlyLady)', 'Organização', 'Fácil', 12, 4, '11:30', [2]), # Tue WFH
-        ('Cassi', 'Preparar o jantar e limpar a pia (Rotina Noturna)', 'Limpeza', 'Difícil', 25, 8, '19:30', [3]), # Wed (Mari away)
-        ('Cassi', 'Levar lixo e recicláveis para a lixeira externa', 'Organização', 'Fácil', 10, 3, '20:30', [4]), # Thu
-        ('Cassi', 'Passar aspirador na casa (Bênção Semanal)', 'Limpeza', 'Difícil', 25, 8, '14:00', [6]), # Sat
-        ('Cassi', 'Lavar roupas da semana (lavar roupa)', 'Limpeza', 'Difícil', 20, 6, '09:00', [0]), # Sun
-        
-        # Mari
-        ('Mari', 'Brilhar a pia da cozinha (Rotina Noturna FlyLady)', 'Limpeza', 'Médio', 15, 5, '21:00', [0, 1, 2, 4, 5, 6]), # except Wed
-        ('Mari', 'Resgate de Cômodo: 5 minutos apagando foco de bagunça', 'Organização', 'Fácil', 12, 4, '18:30', [0, 1, 2, 4, 5, 6]), # except Wed
-        ('Mari', 'Reabastecer alimentador automático de ração dos gatos', 'Pets', 'Médio', 15, 5, '11:00', [0]), # Sunday
-        ('Mari', 'Trocar lençóis e toalhas da casa (Bênção Semanal)', 'Limpeza', 'Difícil', 25, 8, '09:00', [1]), # Mon
-        ('Mari', 'Espanar poeira dos móveis e limpar espelhos', 'Limpeza', 'Médio', 20, 6, '14:00', [5]), # Fri
-        ('Mari', 'Passar pano nos pisos (Bênção Semanal)', 'Limpeza', 'Médio', 15, 5, '15:00', [6]), # Sat
-        ('Mari', 'Lavar roupas de cama e banho (lavar roupa)', 'Limpeza', 'Difícil', 20, 6, '10:00', [1]) # Mon # Fri
+    # 1. Isa's tasks - directly assigned to Isa
+    isa_templates = [
+        # (title, category, difficulty, xp, gold, default_time, days, {day_of_week: time_override})
+        ('Verificar água dos gatos', 'Pets', 'Fácil', 10, 1, '19:30', [2, 0], {0: '10:00'}),
+        ('Tirar o lixo do banheiro', 'Limpeza', 'Difícil', 25, 5, '19:30', [3, 6], {6: '13:00'}),
+        ('Encher a garrafa de água da Isa do quarto', 'Organização', 'Médio', 15, 3, '20:00', [0, 1, 2, 3, 4, 5, 6], {}),
+        ('Banho', 'Geral', 'Fácil', 10, 1, '20:15', [0, 1, 2, 3, 4, 5, 6], {}),
+        ('Banho e lavar cabelo', 'Geral', 'Fácil', 10, 1, '20:15', [0, 2, 4, 6], {}),
+        ('Sapatos na sapateira', 'Organização', 'Fácil', 10, 1, '19:45', [0, 1, 2, 3, 4, 5, 6], {}),
+        ('Roupa suja no cesto', 'Organização', 'Fácil', 10, 1, '20:30', [0, 1, 2, 3, 4, 5, 6], {}),
+        ('Escovar os dentes', 'Geral', 'Fácil', 10, 1, '21:00', [0, 1, 2, 3, 4, 5, 6], {}),
+        ('Guardar brinquedos', 'Infantil', 'Difícil', 25, 5, '17:00', [6, 0], {}),
+        ('Preparar a mochila', 'Infantil', 'Fácil', 10, 1, '20:45', [1, 2, 3, 4, 5], {})
+    ]
+    
+    # 2. Cassi/Mari shared tasks - to be split 50/50 randomly
+    shared_templates = [
+        # (title, category, difficulty, xp, gold, default_time, days, {day_of_week: time_override})
+        ('Verificar ração dos gatos', 'Pets', 'Fácil', 10, 1, '08:00', [1, 4], {}),
+        ('Lavar lençóis e toalhas', 'Limpeza', 'Médio', 15, 5, '09:00', [0], {}),
+        ('Arrumar a sala', 'Organização', 'Ultra', 40, 10, '14:00', [6], {}),
+        ('Arrumar quarto', 'Organização', 'Ultra', 40, 10, '10:00', [6], {}),
+        ('Lavar banheiro', 'Limpeza', 'Ultra', 40, 10, '11:00', [6], {}),
+        ('Arrumar sala de jogos', 'Organização', 'Ultra', 40, 10, '15:00', [6], {}),
+        ('Limpar quarto da Isa', 'Limpeza', 'Médio', 15, 5, '16:00', [6], {}),
+        ('Lavar roupa', 'Limpeza', 'Fácil', 10, 3, '08:30', [1], {}),
+        ('Dobrar roupa', 'Limpeza', 'Médio', 15, 5, '19:30', [1], {}),
+        ('Guardar roupa', 'Limpeza', 'Fácil', 10, 3, '20:00', [1], {}),
+        ('Tirar o lixo', 'Organização', 'Fácil', 10, 3, '19:30', [5], {}),
+        ('Limpar a areia dos gatos', 'Pets', 'Difícil', 25, 5, '19:30', [0, 2, 4, 6], {0: '10:00', 2: '08:30', 6: '10:00'}),
+        ('Pia da cozinha', 'Limpeza', 'Fácil', 10, 1, '20:30', [0, 1, 2, 3, 4, 5, 6], {}),
+        ('15 minutos apagando foco de bagunça', 'Organização', 'Médio', 15, 3, '19:45', [0, 1, 2, 3, 4, 5, 6], {})
     ]
     
     user_colors = {
@@ -357,34 +366,81 @@ def seed_tasks(db_path=None):
         'Isa': '#1dd1a1'
     }
     
+    # Generate all Isa instances
     for offset in range(7):
         current_date = start_date + datetime.timedelta(days=offset)
         date_str = current_date.strftime('%Y-%m-%d')
         day_of_week = (offset + 0) % 7 # Sunday is 0
         
-        for user, title, category, difficulty, xp, gold, time_str, days in task_templates:
+        for title, category, difficulty, xp, gold, time_str, days, overrides in isa_templates:
             if day_of_week in days:
-                # 1. Create a corresponding event in the eventos table!
-                color = user_colors.get(user, '#5f27cd')
+                t_str = overrides.get(day_of_week, time_str)
+                # Save calendar event
+                color = user_colors['Isa']
                 event_id = save_event(
-                    titulo=f"Tarefa {user}: {title}",
+                    titulo=f"Tarefa Isa: {title}",
                     data=date_str,
-                    hora=time_str,
-                    responsavel=user,
+                    hora=t_str,
+                    responsavel='Isa',
                     cor=color,
                     categoria=category,
                     db_path=target_path
                 )
                 
-                # 2. Insert into tarefas table, linked to the event
+                # Insert task
                 conn = get_db_connection(target_path)
-                cursor = conn.cursor()
+                cursor = conn.conn.cursor() if hasattr(conn, 'conn') else conn.cursor()
                 cursor.execute('''
                     INSERT INTO tarefas (usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, completed, data, hora, evento_calendario_id)
                     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
-                ''', (user, title, category, difficulty, xp, gold, date_str, time_str, event_id))
+                ''', ('Isa', title, category, difficulty, xp, gold, date_str, t_str, event_id))
                 conn.commit()
                 conn.close()
+                
+    # Generate all Cassi/Mari shared instances
+    shared_instances = []
+    for offset in range(7):
+        current_date = start_date + datetime.timedelta(days=offset)
+        date_str = current_date.strftime('%Y-%m-%d')
+        day_of_week = (offset + 0) % 7 # Sunday is 0
+        
+        for title, category, difficulty, xp, gold, time_str, days, overrides in shared_templates:
+            if day_of_week in days:
+                t_str = overrides.get(day_of_week, time_str)
+                shared_instances.append({
+                    'titulo': title,
+                    'categoria': category,
+                    'dificuldade': difficulty,
+                    'reward_xp': xp,
+                    'reward_gold': gold,
+                    'data': date_str,
+                    'hora': t_str
+                })
+                
+    # Shuffle and split 50/50 randomly
+    random.shuffle(shared_instances)
+    mid = len(shared_instances) // 2
+    for idx, inst in enumerate(shared_instances):
+        user = 'Cassi' if idx < mid else 'Mari'
+        color = user_colors[user]
+        event_id = save_event(
+            titulo=f"Tarefa {user}: {inst['titulo']}",
+            data=inst['data'],
+            hora=inst['hora'],
+            responsavel=user,
+            cor=color,
+            categoria=inst['categoria'],
+            db_path=target_path
+        )
+        
+        conn = get_db_connection(target_path)
+        cursor = conn.conn.cursor() if hasattr(conn, 'conn') else conn.cursor()
+        cursor.execute('''
+            INSERT INTO tarefas (usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, completed, data, hora, evento_calendario_id)
+            VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+        ''', (user, inst['titulo'], inst['categoria'], inst['dificuldade'], inst['reward_xp'], inst['reward_gold'], inst['data'], inst['hora'], event_id))
+        conn.commit()
+        conn.close()
 
 def get_all_users(db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
@@ -420,23 +476,53 @@ def update_user_stats(nome, xp, gold, nivel, xp_to_next_level, db_path=None):
 def get_tasks_for_user(usuario_nome, db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
-    cursor = conn.cursor()
+    cursor = conn.conn.cursor() if hasattr(conn, 'conn') else conn.cursor()
     cursor.execute(
         "SELECT id, usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, completed, data, hora, evento_calendario_id FROM tarefas WHERE LOWER(usuario_nome) = ?",
         (usuario_nome.lower(),)
     )
     rows = cursor.fetchall()
-    tasks = [dict(row) for row in rows]
+    tasks = []
+    import datetime
+    today = datetime.date.today()
+    for row in rows:
+        t = dict(row)
+        if not t['completed']:
+            try:
+                task_date = datetime.datetime.strptime(t['data'], '%Y-%m-%d').date()
+                days_overdue = (today - task_date).days
+                if days_overdue > 0:
+                    t['reward_xp'] += days_overdue * 2
+                    t['reward_gold'] += days_overdue * 1
+                    t['overdue_days'] = days_overdue
+            except Exception:
+                pass
+        tasks.append(t)
     conn.close()
     return tasks
 
 def get_all_tasks(db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
-    cursor = conn.cursor()
+    cursor = conn.conn.cursor() if hasattr(conn, 'conn') else conn.cursor()
     cursor.execute("SELECT id, usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, completed, data, hora, evento_calendario_id FROM tarefas")
     rows = cursor.fetchall()
-    tasks = [dict(row) for row in rows]
+    tasks = []
+    import datetime
+    today = datetime.date.today()
+    for row in rows:
+        t = dict(row)
+        if not t['completed']:
+            try:
+                task_date = datetime.datetime.strptime(t['data'], '%Y-%m-%d').date()
+                days_overdue = (today - task_date).days
+                if days_overdue > 0:
+                    t['reward_xp'] += days_overdue * 2
+                    t['reward_gold'] += days_overdue * 1
+                    t['overdue_days'] = days_overdue
+            except Exception:
+                pass
+        tasks.append(t)
     conn.close()
     return tasks
 
@@ -478,7 +564,7 @@ def complete_task_in_db(task_id, db_path=None):
     cursor = conn.cursor()
     
     cursor.execute(
-        "SELECT id, usuario_nome, titulo, reward_xp, reward_gold, completed, evento_calendario_id FROM tarefas WHERE id = ?",
+        "SELECT id, usuario_nome, titulo, reward_xp, reward_gold, completed, data, evento_calendario_id FROM tarefas WHERE id = ?",
         (task_id,)
     )
     task = cursor.fetchone()
@@ -502,8 +588,22 @@ def complete_task_in_db(task_id, db_path=None):
         conn.close()
         return True, dict(task), False
         
-    xp = user_row['xp'] + task['reward_xp']
-    gold = user_row['gold'] + task['reward_gold']
+    # Calculate rewards including dynamic rollover bonus
+    reward_xp = task['reward_xp']
+    reward_gold = task['reward_gold']
+    try:
+        import datetime
+        task_date = datetime.datetime.strptime(task['data'], '%Y-%m-%d').date()
+        today = datetime.date.today()
+        days_overdue = (today - task_date).days
+        if days_overdue > 0:
+            reward_xp += days_overdue * 2
+            reward_gold += days_overdue * 1
+    except Exception:
+        pass
+        
+    xp = user_row['xp'] + reward_xp
+    gold = user_row['gold'] + reward_gold
     nivel = user_row['nivel']
     xp_to_next = user_row['xp_to_next_level']
     leveled_up = False
@@ -634,3 +734,69 @@ def redeem_reward_in_db(reward_id, db_path=None):
     conn.close()
     
     return True, "Recompensa resgatada com sucesso!", get_user_by_name(user_nome, target_path)
+
+def update_task_in_db(task_id, usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, data, hora, db_path=None):
+    """Updates an existing task in the database and updates its associated calendar event if linked."""
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    
+    # 1. Fetch old task details to check if there is an associated calendar event
+    cursor.execute("SELECT evento_calendario_id FROM tarefas WHERE id = ?", (task_id,))
+    row = cursor.fetchone()
+    evt_id = row['evento_calendario_id'] if row else None
+    
+    # 2. Update task details in DB
+    cursor.execute('''
+        UPDATE tarefas 
+        SET usuario_nome = ?, titulo = ?, categoria = ?, dificuldade = ?, reward_xp = ?, reward_gold = ?, data = ?, hora = ?
+        WHERE id = ?
+    ''', (usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, data, hora, task_id))
+    
+    # 3. Update the associated calendar event if linked
+    if evt_id:
+        user_colors = {
+            'Mari': '#ff7675',
+            'Cassi': '#54a0ff',
+            'Isa': '#1dd1a1'
+        }
+        color = user_colors.get(usuario_nome, '#5f27cd')
+        cursor.execute('''
+            UPDATE eventos
+            SET titulo = ?, data = ?, hora = ?, responsavel = ?, cor = ?, categoria = ?
+            WHERE id = ?
+        ''', (f"Tarefa {usuario_nome}: {titulo}", data, hora, usuario_nome, color, categoria, evt_id))
+        
+    conn.commit()
+    conn.close()
+    return True
+
+def delete_task_in_db(task_id, db_path=None):
+    """Deletes a task by ID and removes its corresponding calendar event if linked."""
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    
+    # 1. Fetch event ID
+    cursor.execute("SELECT evento_calendario_id FROM tarefas WHERE id = ?", (task_id,))
+    row = cursor.fetchone()
+    evt_id = row['evento_calendario_id'] if row else None
+    
+    # 2. Delete from tarefas
+    cursor.execute("DELETE FROM tarefas WHERE id = ?", (task_id,))
+    
+    # 3. Delete associated event
+    if evt_id:
+        # Record google_event_id if it exists before deleting for sync
+        cursor.execute("SELECT google_event_id FROM eventos WHERE id = ?", (evt_id,))
+        evt_row = cursor.fetchone()
+        if evt_row and evt_row['google_event_id']:
+            g_id = evt_row['google_event_id']
+            cursor.execute("INSERT OR IGNORE INTO eventos_deletados (google_event_id) VALUES (?)", (g_id,))
+            
+        cursor.execute("DELETE FROM eventos WHERE id = ?", (evt_id,))
+        
+    conn.commit()
+    conn.close()
+    return True
+

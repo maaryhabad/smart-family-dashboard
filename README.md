@@ -32,10 +32,13 @@ Agenda dinâmica integrada para coordenar a rotina do lar.
 Transforma as tarefas domésticas da casa em uma jornada divertida de RPG (Role-Playing Game).
 * **Perfis Personalizados**: 3 jogadores cadastrados: **Mari** (Guardiã da Organização), **Cassi** (Guerreiro da Limpeza) e **Isa** (Pequena Aprendiz, 5 anos), com regras de pontuação adaptadas e progresso individual.
 * **Tarefas Inteligentes (Método FlyLady)**: Chores gerados dinamicamente seguindo o método FlyLady (Bênção Semanal, Rotinas Diárias, Passos de Bebê para Isa), ajustados automaticamente às restrições dos membros (trabalho presencial do Cassi, quarta-feira fora da Mari, escola e atividades da Isa).
-* **Integração com Calendário**: As quests ativas são sincronizadas automaticamente como eventos no calendário familiar, ganhando um checkmark (`✅`) no título assim que completadas.
+* **Gestão de Missões (CRUD Completo)**: Permite adicionar, editar e excluir missões (tarefas) diretamente pelo painel através do modal de criação de novas missões, preenchendo datas, horários e dificuldades de forma integrada.
+* **Sistema de Rollover de Missões**: Missões passadas não completadas continuam visíveis na lista como acumuladas, recebendo o marcador `⚠️ Acumulada` e escalando as recompensas dinamicamente em **+2 XP** e **+1 Gold** por dia de atraso.
+* **Níveis de Dificuldade e Recompensas**: Dificuldades predefinidas: Fácil (10 XP / 1 Gold), Médio (15 XP / 3 Gold), Difícil (25 XP / 5 Gold), e a nova dificuldade **Ultra** (40 XP / 10 Gold) para faxinas pesadas e complexas.
+* **Integração com Calendário**: As quests ativas são sincronizadas automaticamente como eventos no calendário familiar (sem poluir a visão mensal com marcações redundantes), ganhando um checkmark (`✅`) no título assim que completadas.
 * **Resgate de Recompensas**: Loja de itens com preços em ouro virtual, permitindo que cada usuário troque seu ouro por recompensas customizadas (ex: SPA para Mari, Videogame para Cassi, Desenhos/Tablet para Isa).
 * **NLU Conversacional**: Conclusão de tarefas e resgate de recompensas podem ser feitos digitando comandos diretamente no chat (ex: *"completei a tarefa de limpar a caixa de areia"* ou *"Isa quer comprar a recompensa de historinha"*), com fallback local offline robusto.
-* **Divisão Justa de Tarefas Domésticas**: Tarefas de faxina (passar aspirador, passar pano, lavar roupa) são divididas inteligentemente entre Mari e Cassi em dias apropriados, e a pequena Isa fica responsável por tarefas leves adequadas para a idade, como *"Tirar o lixo do banheiro"* (1x por semana).
+* **Divisão Justa de Tarefas Domésticas**: Cassi e Mari dividem as tarefas semanais na metade (50/50) de forma aleatória a cada carregamento de diárias, e a pequena Isa fica responsável pelas tarefas adequadas para a idade, como *"Tirar o lixo do banheiro"* (2x por semana) e *"Verificar água dos gatos"* (2x por semana).
 
 ---
 

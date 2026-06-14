@@ -50,14 +50,27 @@ def parse_recipe_details(message):
     msg_lower = message.lower()
     
     prefixes = [
-        "registrar receita de ", "registrar receita ", "registrar a receita de ", "registrar a receita ",
-        "salvar receita de ", "salvar receita ", "salvar a receita de ", "salvar a receita ",
-        "cadastrar receita de ", "cadastrar receita ", "cadastrar a receita de ", "cadastrar a receita ",
-        "adicionar receita de ", "adicionar receita ", "adicionar a receita de ", "adicionar a receita ",
-        "editar receita de ", "editar receita ", "editar a receita de ", "editar a receita ",
-        "alterar receita de ", "alterar receita ", "alterar a receita de ", "alterar a receita ",
-        "atualizar receita de ", "atualizar receita ", "atualizar a receita de ", "atualizar a receita ",
-        "modificar receita de ", "modificar receita ", "modificar a receita de ", "modificar a receita "
+        # registrar
+        "registrar a receita de ", "registrar a receita ", "registrar receita de ", "registrar receita ",
+        "registra essa receita de ", "registra essa receita ", "registra a receita de ", "registra a receita ", "registra receita de ", "registra receita ",
+        # salvar
+        "salvar a receita de ", "salvar a receita ", "salvar receita de ", "salvar receita ",
+        "salva essa receita de ", "salva essa receita ", "salva a receita de ", "salva a receita ", "salva receita de ", "salva receita ",
+        "salve essa receita de ", "salve essa receita ", "salve a receita de ", "salve a receita ", "salve receita de ", "salve receita ",
+        # cadastrar
+        "cadastrar a receita de ", "cadastrar a receita ", "cadastrar receita de ", "cadastrar receita ",
+        "cadastra essa receita de ", "cadastra essa receita ", "cadastra a receita de ", "cadastra a receita ", "cadastra receita de ", "cadastra receita ",
+        # adicionar
+        "adicionar a receita de ", "adicionar a receita ", "adicionar receita de ", "adicionar receita ",
+        "adiciona essa receita de ", "adiciona essa receita ", "adiciona a receita de ", "adiciona a receita ", "adiciona receita de ", "adiciona receita ",
+        # anotar
+        "anote essa receita de ", "anote essa receita ", "anote a receita de ", "anote a receita ", "anote receita de ", "anote receita ",
+        "anota essa receita de ", "anota essa receita ", "anota a receita de ", "anota a receita ", "anota receita de ", "anota receita ",
+        # editar / alterar / atualizar / modificar
+        "editar a receita de ", "editar a receita ", "editar receita de ", "editar receita ",
+        "alterar a receita de ", "alterar a receita ", "alterar receita de ", "alterar receita ",
+        "atualizar a receita de ", "atualizar a receita ", "atualizar receita de ", "atualizar receita ",
+        "modificar a receita de ", "modificar a receita ", "modificar receita de ", "modificar receita "
     ]
     
     prefix_found = None

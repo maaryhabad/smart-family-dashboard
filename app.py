@@ -371,6 +371,96 @@ def add_reward_route():
         }
     })
 
+@app.route('/api/todo-gamer/salvar', methods=['POST'])
+def save_or_update_quest_route():
+    data = request.json or {}
+    quest_id = data.get("id")
+    usuario_nome = data.get("usuario_nome", "Mari").strip()
+    titulo = data.get("titulo", "").strip()
+    categoria = data.get("categoria", "Limpeza").strip()
+    dificuldade = data.get("dificuldade", "Fácil").strip()
+    
+    try:
+        reward_xp = int(data.get("reward_xp", 10))
+        reward_gold = int(data.get("reward_gold", 3))
+    except ValueError:
+        return jsonify({"error": "XP e Gold devem ser números inteiros."}), 400
+        
+    data_evt = data.get("data", "").strip()
+    hora = data.get("hora", "").strip()
+    
+    if not titulo or not data_evt or not hora:
+        return jsonify({"error": "Nome da missão, Data e Hora são obrigatórios."}), 400
+        
+    from modules.ia_memoria.database import save_task, update_task_in_db, get_all_users, get_all_tasks, get_all_rewards
+    
+    if quest_id:
+        update_task_in_db(
+            task_id=quest_id,
+            usuario_nome=usuario_nome,
+            titulo=titulo,
+            categoria=categoria,
+            dificuldade=dificuldade,
+            reward_xp=reward_xp,
+            reward_gold=reward_gold,
+            data=data_evt,
+            hora=hora
+        )
+        msg = "Missão atualizada com sucesso!"
+    else:
+        save_task(
+            usuario_nome=usuario_nome,
+            titulo=titulo,
+            categoria=categoria,
+            dificuldade=dificuldade,
+            reward_xp=reward_xp,
+            reward_gold=reward_gold,
+            data=data_evt,
+            hora=hora
+        )
+        msg = "Missão criada com sucesso!"
+        
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
+    
+    return jsonify({
+        "success": True,
+        "message": msg,
+        "state": {
+            "character": users[0] if users else {},
+            "profiles": users,
+            "quests": tasks,
+            "rewards": rewards
+        }
+    })
+
+@app.route('/api/todo-gamer/excluir', methods=['POST'])
+def delete_quest_route():
+    data = request.json or {}
+    quest_id = data.get("id")
+    if not quest_id:
+        return jsonify({"error": "ID da missão é obrigatório."}), 400
+        
+    from modules.ia_memoria.database import delete_task_in_db, get_all_users, get_all_tasks, get_all_rewards
+    delete_task_in_db(quest_id)
+    
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
+    
+    return jsonify({
+        "success": True,
+        "message": "Missão excluída com sucesso!",
+        "state": {
+            "character": users[0] if users else {},
+            "profiles": users,
+            "quests": tasks,
+            "rewards": rewards
+        }
+    })
+
+
 if __name__ == '__main__':
     # Initialize SQLite database
     init_db()
