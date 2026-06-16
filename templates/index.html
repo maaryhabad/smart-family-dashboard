@@ -586,11 +586,13 @@
     <div class="modal-overlay" id="reward-modal">
         <div class="modal-content glass-panel" style="max-width: 400px;">
             <div class="modal-header">
-                <h3>🎁 Nova Recompensa</h3>
+                <h3 id="reward-modal-title">🎁 Nova Recompensa</h3>
                 <button class="btn-close-modal" id="btn-close-reward-modal" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="reward-form" onsubmit="event.preventDefault();">
+                    <input type="hidden" id="edit-reward-id">
+                    
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label for="new-reward-title" style="display:block; margin-bottom:5px; font-weight:500;">Título da Recompensa</label>
                         <input type="text" id="new-reward-title" placeholder="Ex: 30 min de videogame, Sorvete..." required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
@@ -605,7 +607,7 @@
                     </div>
                     <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
                         <button type="button" class="btn btn-secondary" id="btn-cancel-reward-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Criar Recompensa</button>
+                        <button type="submit" id="btn-save-reward" class="btn btn-primary" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Criar Recompensa</button>
                     </div>
                 </form>
             </div>

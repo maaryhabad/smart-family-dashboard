@@ -346,6 +346,7 @@ def redeem_reward_route():
 @app.route('/api/todo-gamer/add-reward', methods=['POST'])
 def add_reward_route():
     data = request.json or {}
+    reward_id = data.get("id")
     user_nome = data.get("usuario_nome")
     titulo = data.get("titulo")
     custo = data.get("custo")
@@ -354,15 +355,47 @@ def add_reward_route():
     if not user_nome or not titulo or not custo or not icone:
         return jsonify({"error": "Preencha todos os campos obrigatórios."}), 400
         
-    from modules.ia_memoria.database import save_reward, get_all_users, get_all_tasks, get_all_rewards
-    save_reward(user_nome, titulo, int(custo), icone)
+    from modules.ia_memoria.database import save_reward, update_reward_in_db, get_all_users, get_all_tasks, get_all_rewards
+    
+    if reward_id:
+        update_reward_in_db(reward_id, user_nome, titulo, int(custo), icone)
+        msg = "Recompensa atualizada com sucesso!"
+    else:
+        save_reward(user_nome, titulo, int(custo), icone)
+        msg = "Recompensa criada com sucesso!"
+        
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
+    
+    return jsonify({
+        "success": True,
+        "message": msg,
+        "state": {
+            "character": users[0] if users else {},
+            "profiles": users,
+            "quests": tasks,
+            "rewards": rewards
+        }
+    })
+
+@app.route('/api/todo-gamer/excluir-recompensa', methods=['POST'])
+def delete_reward_route():
+    data = request.json or {}
+    reward_id = data.get("id")
+    if not reward_id:
+        return jsonify({"error": "ID da recompensa é obrigatório."}), 400
+        
+    from modules.ia_memoria.database import delete_reward_in_db, get_all_users, get_all_tasks, get_all_rewards
+    delete_reward_in_db(reward_id)
     
     users = get_all_users()
     tasks = get_all_tasks()
     rewards = get_all_rewards()
     
     return jsonify({
-        "message": "Recompensa criada com sucesso!",
+        "success": True,
+        "message": "Recompensa excluída com sucesso!",
         "state": {
             "character": users[0] if users else {},
             "profiles": users,

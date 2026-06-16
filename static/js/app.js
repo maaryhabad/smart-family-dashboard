@@ -886,8 +886,8 @@ function renderCalendarGrid(year, month) {
     }
     
     // Fill days of the month
-    const systemDate = new Date(); // To mock "today" as June 14, 2026
-    const mockTodayDay = 14; // Let's mock today as 14th of June
+    const systemDate = new Date(); // To mock "today" as June 15, 2026
+    const mockTodayDay = 15; // Let's mock today as 15th of June
     
     for (let day = 1; day <= totalDays; day++) {
         const dayDiv = document.createElement('div');
@@ -941,8 +941,8 @@ function renderEventsList() {
     if (eventsListContainer) eventsListContainer.innerHTML = '';
     if (tasksListContainer) tasksListContainer.innerHTML = '';
     
-    // Mock today is June 14, 2026 (based on calendar grid init)
-    const todayStr = '2026-06-14';
+    // Mock today is June 15, 2026 (based on calendar grid init)
+    const todayStr = '2026-06-15';
     const todayDate = new Date(todayStr);
     const maxDate = new Date(todayDate);
     maxDate.setDate(todayDate.getDate() + 8);
@@ -1312,7 +1312,7 @@ function setupGamerListeners() {
     
     if (addRewardBtn) {
         addRewardBtn.addEventListener('click', () => {
-            if (rewardModal) rewardModal.classList.add('active');
+            openRewardModal();
         });
     }
     
@@ -1330,6 +1330,7 @@ function setupGamerListeners() {
     if (rewardForm) {
         rewardForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const id = document.getElementById('edit-reward-id').value;
             const titulo = document.getElementById('new-reward-title').value.trim();
             const custo = parseInt(document.getElementById('new-reward-cost').value);
             const icone = document.getElementById('new-reward-icon').value.trim();
@@ -1344,6 +1345,7 @@ function setupGamerListeners() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        id: id ? parseInt(id) : null,
                         usuario_nome: activeGamerMember,
                         titulo,
                         custo,
@@ -1356,12 +1358,12 @@ function setupGamerListeners() {
                     gamerState = data.state;
                     updateGamerUI();
                     closeRewardModal();
-                    showToast("Nova recompensa adicionada com sucesso!", "success");
+                    showToast(id ? "Recompensa atualizada com sucesso!" : "Nova recompensa adicionada com sucesso!", "success");
                 } else {
                     showToast(`Erro: ${data.error}`, "warning");
                 }
             } catch (err) {
-                showToast("Erro ao criar nova recompensa.", "warning");
+                showToast(id ? "Erro ao atualizar recompensa." : "Erro ao criar nova recompensa.", "warning");
             }
         });
     }
@@ -1486,7 +1488,7 @@ function updateGamerUI() {
     questsContainer.innerHTML = '';
     
     // Filter quests for the active member and today's date or uncompleted past tasks
-    const todayStr = '2026-06-14';
+    const todayStr = '2026-06-15';
     const memberQuests = gamerState.quests.filter(q => 
         q.usuario_nome.toLowerCase() === activeGamerMember.toLowerCase() &&
         (q.data === todayStr || (q.data < todayStr && !q.completed))
@@ -1564,8 +1566,24 @@ function updateGamerUI() {
                         <span class="reward-card-cost">🪙 ${rew.custo} Ouro</span>
                     </div>
                 </div>
-                ${btnHtml}
+                <div class="reward-actions" style="display: flex; align-items: center; gap: 8px;">
+                    ${btnHtml}
+                    ${!rew.resgatado ? `
+                    <div class="reward-card-controls" style="display: flex; gap: 4px;">
+                        <button class="btn-reward-edit" title="Editar Recompensa" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; color: white;">✏️</button>
+                        <button class="btn-reward-delete" title="Excluir Recompensa" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; color: white;">🗑️</button>
+                    </div>
+                    ` : ''}
+                </div>
             `;
+            
+            if (!rew.resgatado) {
+                const editBtn = card.querySelector('.btn-reward-edit');
+                const deleteBtn = card.querySelector('.btn-reward-delete');
+                if (editBtn) editBtn.addEventListener('click', (e) => { e.stopPropagation(); openRewardModal(rew); });
+                if (deleteBtn) deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); confirmDeleteReward(rew); });
+            }
+            
             rewardsContainer.appendChild(card);
         });
     }
@@ -1778,5 +1796,57 @@ async function confirmDeleteQuest(quest) {
         }
     }
 }
+
+window.openRewardModal = function(reward = null) {
+    const modal = document.getElementById('reward-modal');
+    const title = document.getElementById('reward-modal-title');
+    const idInput = document.getElementById('edit-reward-id');
+    const titleInput = document.getElementById('new-reward-title');
+    const costInput = document.getElementById('new-reward-cost');
+    const iconInput = document.getElementById('new-reward-icon');
+    const submitBtn = document.getElementById('btn-save-reward');
+    
+    if (reward) {
+        title.textContent = "Editar Recompensa";
+        idInput.value = reward.id;
+        titleInput.value = reward.titulo;
+        costInput.value = reward.custo;
+        iconInput.value = reward.icone;
+        if (submitBtn) submitBtn.textContent = "Salvar Alterações";
+    } else {
+        title.textContent = "Nova Recompensa";
+        idInput.value = '';
+        titleInput.value = '';
+        costInput.value = '';
+        iconInput.value = '';
+        if (submitBtn) submitBtn.textContent = "Criar Recompensa";
+    }
+    modal.classList.add('active');
+};
+
+window.confirmDeleteReward = async function(reward) {
+    if (confirm(`Tem certeza que deseja excluir permanentemente a recompensa "${reward.titulo}"?`)) {
+        try {
+            const res = await fetch('/api/todo-gamer/excluir-recompensa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: reward.id })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                gamerState = data.state;
+                updateGamerUI();
+                showToast("Recompensa excluída com sucesso!", "success");
+            } else {
+                showToast(`Erro: ${data.error}`, "warning");
+            }
+        } catch (err) {
+            console.error("Error deleting reward:", err);
+            showToast("Erro de conexão ao excluir recompensa.", "warning");
+        }
+    }
+};
+
 
 

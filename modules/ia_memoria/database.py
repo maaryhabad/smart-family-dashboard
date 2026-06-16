@@ -17,163 +17,166 @@ def init_db(db_path=None):
     """Initializes the database and seeds initial values if empty."""
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
-    cursor = conn.cursor()
-    
-    # Create table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS memorias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            categoria TEXT NOT NULL,
-            chave TEXT NOT NULL,
-            conteudo TEXT NOT NULL,
-            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Create eventos table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS eventos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            titulo TEXT NOT NULL,
-            data TEXT NOT NULL,
-            hora TEXT NOT NULL,
-            responsavel TEXT DEFAULT 'Família',
-            cor TEXT DEFAULT '#5f27cd',
-            categoria TEXT DEFAULT 'Familiar',
-            google_event_id TEXT,
-            localizacao TEXT,
-            recorrencia TEXT
-        )
-    ''')
-    
-    # Check if localizacao and recorrencia columns exist, add if not
-    cursor.execute("PRAGMA table_info(eventos)")
-    columns = [row[1] for row in cursor.fetchall()]
-    if 'localizacao' not in columns:
-        cursor.execute("ALTER TABLE eventos ADD COLUMN localizacao TEXT")
-    if 'recorrencia' not in columns:
-        cursor.execute("ALTER TABLE eventos ADD COLUMN recorrencia TEXT")
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        cursor = conn.cursor()
         
-    # Create table usuarios
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT UNIQUE NOT NULL,
-            avatar TEXT,
-            classe TEXT,
-            nivel INTEGER DEFAULT 1,
-            xp INTEGER DEFAULT 0,
-            xp_to_next_level INTEGER DEFAULT 100,
-            gold INTEGER DEFAULT 0
-        )
-    ''')
-    
-    # Create table tarefas
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tarefas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_nome TEXT NOT NULL,
-            titulo TEXT NOT NULL,
-            categoria TEXT NOT NULL,
-            dificuldade TEXT NOT NULL,
-            reward_xp INTEGER NOT NULL,
-            reward_gold INTEGER NOT NULL,
-            completed INTEGER DEFAULT 0,
-            data TEXT NOT NULL,
-            hora TEXT NOT NULL,
-            evento_calendario_id INTEGER
-        )
-    ''')
-    
-    # Create table recompensas
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS recompensas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_nome TEXT NOT NULL,
-            titulo TEXT NOT NULL,
-            custo INTEGER NOT NULL,
-            icone TEXT NOT NULL,
-            resgatado INTEGER DEFAULT 0
-        )
-    ''')
-    
-    # Create table eventos_deletados
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS eventos_deletados (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            google_event_id TEXT UNIQUE NOT NULL
-        )
-    ''')
-    
-    # Check if empty to seed initial values
-    cursor.execute("SELECT COUNT(*) FROM memorias")
-    count = cursor.fetchone()[0]
-    
-    if count == 0:
-        initial_memories = [
-            ('Senhas', 'wifi', 'A senha do Wi-Fi de visitas é **FamiliaFeliz2026!** e funciona nas redes 2.4Ghz e 5Ghz.'),
-            ('Segurança', 'chave', 'As chaves reserva da casa e do carro estão guardadas na caixinha de madeira na gaveta do meio do aparador da entrada.'),
-            ('Contatos', 'encanador', 'O contato do encanador Seu Mário é **(11) 98765-4321**. Ele atende emergências de final de semana.'),
-            ('Ferramentas', 'ferramenta', 'A caixa de ferramentas vermelha está na segunda prateleira da estante de metal na garagem.'),
-            ('Organização', 'natal', 'As caixas com decorações de Natal estão guardadas no sótão/maleiro do quarto de hóspedes, etiquetadas como "NATAL".'),
-            ('Pets', 'vacina', 'A carteira de vacinação do Pipoca (o pet) está na pasta de documentos azul no armário do escritório.')
-        ]
+        # Create table memorias
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS memorias (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                categoria TEXT NOT NULL,
+                chave TEXT NOT NULL,
+                conteudo TEXT NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         
-        cursor.executemany(
-            "INSERT INTO memorias (categoria, chave, conteudo) VALUES (?, ?, ?)",
-            initial_memories
-        )
+        # Create eventos table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS eventos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                titulo TEXT NOT NULL,
+                data TEXT NOT NULL,
+                hora TEXT NOT NULL,
+                responsavel TEXT DEFAULT 'Família',
+                cor TEXT DEFAULT '#5f27cd',
+                categoria TEXT DEFAULT 'Familiar',
+                google_event_id TEXT,
+                localizacao TEXT,
+                recorrencia TEXT
+            )
+        ''')
+        
+        # Check if localizacao and recorrencia columns exist, add if not
+        cursor.execute("PRAGMA table_info(eventos)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'localizacao' not in columns:
+            cursor.execute("ALTER TABLE eventos ADD COLUMN localizacao TEXT")
+        if 'recorrencia' not in columns:
+            cursor.execute("ALTER TABLE eventos ADD COLUMN recorrencia TEXT")
+            
+        # Create table usuarios
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT UNIQUE NOT NULL,
+                avatar TEXT,
+                classe TEXT,
+                nivel INTEGER DEFAULT 1,
+                xp INTEGER DEFAULT 0,
+                xp_to_next_level INTEGER DEFAULT 100,
+                gold INTEGER DEFAULT 0
+            )
+        ''')
+        
+        # Create table tarefas
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tarefas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_nome TEXT NOT NULL,
+                titulo TEXT NOT NULL,
+                categoria TEXT NOT NULL,
+                dificuldade TEXT NOT NULL,
+                reward_xp INTEGER NOT NULL,
+                reward_gold INTEGER NOT NULL,
+                completed INTEGER DEFAULT 0,
+                data TEXT NOT NULL,
+                hora TEXT NOT NULL,
+                evento_calendario_id INTEGER
+            )
+        ''')
+        
+        # Create table recompensas
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS recompensas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_nome TEXT NOT NULL,
+                titulo TEXT NOT NULL,
+                custo INTEGER NOT NULL,
+                icone TEXT NOT NULL,
+                resgatado INTEGER DEFAULT 0
+            )
+        ''')
+        
+        # Create table eventos_deletados
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS eventos_deletados (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                google_event_id TEXT UNIQUE NOT NULL
+            )
+        ''')
+        
+        # Check if empty to seed initial values
+        cursor.execute("SELECT COUNT(*) FROM memorias")
+        count = cursor.fetchone()[0]
+        
+        if count == 0:
+            initial_memories = [
+                ('Senhas', 'wifi', 'A senha do Wi-Fi de visitas é **FamiliaFeliz2026!** e funciona nas redes 2.4Ghz e 5Ghz.'),
+                ('Segurança', 'chave', 'As chaves reserva da casa e do carro estão guardadas na caixinha de madeira na gaveta do meio do aparador da entrada.'),
+                ('Contatos', 'encanador', 'O contato do encanador Seu Mário é **(11) 98765-4321**. Ele atende emergências de final de semana.'),
+                ('Ferramentas', 'ferramenta', 'A caixa de ferramentas vermelha está na segunda prateleira da estante de metal na garagem.'),
+                ('Organização', 'natal', 'As caixas com decorações de Natal estão guardadas no sótão/maleiro do quarto de hóspedes, etiquetadas como "NATAL".'),
+                ('Pets', 'vacina', 'A carteira de vacinação do Pipoca (o pet) está na pasta de documentos azul no armário do escritório.')
+            ]
+            
+            cursor.executemany(
+                "INSERT INTO memorias (categoria, chave, conteudo) VALUES (?, ?, ?)",
+                initial_memories
+            )
+            print("Banco de dados modular inicializado e populado com memórias padrão!")
+            
+        # Seed profiles
+        cursor.execute("SELECT COUNT(*) FROM usuarios")
+        user_count = cursor.fetchone()[0]
+        if user_count == 0:
+            initial_users = [
+                ('Mari', '👩‍💻', 'Guardiã da Organização', 1, 0, 100, 0),
+                ('Cassi', '👨‍💻', 'Guerreiro da Limpeza', 1, 0, 100, 0),
+                ('Isa', '👧', 'Pequena Aprendiz', 1, 0, 100, 0)
+            ]
+            cursor.executemany(
+                "INSERT INTO usuarios (nome, avatar, classe, nivel, xp, xp_to_next_level, gold) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                initial_users
+            )
+            print("Perfis de usuários semeados!")
+            
+        # Seed rewards
+        cursor.execute("SELECT COUNT(*) FROM recompensas")
+        rewards_count = cursor.fetchone()[0]
+        if rewards_count == 0:
+            initial_rewards = [
+                ('Mari', 'Momento SPA em casa', 30, '🧖‍♀️'),
+                ('Mari', 'Escolher o restaurante do jantar de sexta', 20, '🍕'),
+                ('Mari', '1 hora de leitura ininterrupta', 25, '📚'),
+                ('Mari', 'Café da manhã na cama preparado pelo Cassi', 40, '☕'),
+                ('Cassi', '1 hora de videogame sem interrupções', 30, '🎮'),
+                ('Cassi', 'Escolher o filme do final de semana', 15, '🍿'),
+                ('Cassi', 'Dormir até mais tarde no domingo', 25, '😴'),
+                ('Cassi', 'Escolher a cerveja artesanal do churrasco', 40, '🍺'),
+                ('Isa', '30 min de tela (desenho/tablet)', 15, '📱'),
+                ('Isa', 'Escolher a historinha de dormir', 5, '📖'),
+                ('Isa', 'Brincar de massinha com papai/mamãe', 10, '🎨'),
+                ('Isa', 'Passeio no parque no fim de semana', 35, '🛝')
+            ]
+            cursor.executemany(
+                "INSERT INTO recompensas (usuario_nome, titulo, custo, icone) VALUES (?, ?, ?, ?)",
+                initial_rewards
+            )
+            print("Recompensas semeadas!")
+            
+        # Seed tasks
+        cursor.execute("SELECT COUNT(*) FROM tarefas")
+        tasks_count = cursor.fetchone()[0]
+        if tasks_count == 0:
+            seed_tasks(conn=conn)
+            
         conn.commit()
-        print("Banco de dados modular inicializado e populado com memórias padrão!")
-        
-    # Seed profiles
-    cursor.execute("SELECT COUNT(*) FROM usuarios")
-    user_count = cursor.fetchone()[0]
-    if user_count == 0:
-        initial_users = [
-            ('Mari', '👩‍💻', 'Guardiã da Organização', 1, 0, 100, 0),
-            ('Cassi', '👨‍💻', 'Guerreiro da Limpeza', 1, 0, 100, 0),
-            ('Isa', '👧', 'Pequena Aprendiz', 1, 0, 100, 0)
-        ]
-        cursor.executemany(
-            "INSERT INTO usuarios (nome, avatar, classe, nivel, xp, xp_to_next_level, gold) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            initial_users
-        )
-        conn.commit()
-        print("Perfis de usuários semeados!")
-        
-    # Seed rewards
-    cursor.execute("SELECT COUNT(*) FROM recompensas")
-    rewards_count = cursor.fetchone()[0]
-    if rewards_count == 0:
-        initial_rewards = [
-            ('Mari', 'Momento SPA em casa', 30, '🧖‍♀️'),
-            ('Mari', 'Escolher o restaurante do jantar de sexta', 20, '🍕'),
-            ('Mari', '1 hora de leitura ininterrupta', 25, '📚'),
-            ('Mari', 'Café da manhã na cama preparado pelo Cassi', 40, '☕'),
-            ('Cassi', '1 hora de videogame sem interrupções', 30, '🎮'),
-            ('Cassi', 'Escolher o filme do final de semana', 15, '🍿'),
-            ('Cassi', 'Dormir até mais tarde no domingo', 25, '😴'),
-            ('Cassi', 'Escolher a cerveja artesanal do churrasco', 40, '🍺'),
-            ('Isa', '30 min de tela (desenho/tablet)', 15, '📱'),
-            ('Isa', 'Escolher a historinha de dormir', 5, '📖'),
-            ('Isa', 'Brincar de massinha com papai/mamãe', 10, '🎨'),
-            ('Isa', 'Passeio no parque no fim de semana', 35, '🛝')
-        ]
-        cursor.executemany(
-            "INSERT INTO recompensas (usuario_nome, titulo, custo, icone) VALUES (?, ?, ?, ?)",
-            initial_rewards
-        )
-        conn.commit()
-        print("Recompensas semeadas!")
-        
-    # Seed tasks
-    cursor.execute("SELECT COUNT(*) FROM tarefas")
-    tasks_count = cursor.fetchone()[0]
-    if tasks_count == 0:
-        conn.close()
-        seed_tasks(target_path)
-    else:
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
         conn.close()
 
 def save_memory(categoria, chave, conteudo, db_path=None):
@@ -244,18 +247,23 @@ def get_all_events(db_path=None):
     conn.close()
     return events
 
-def save_event(titulo, data, hora, responsavel='Família', cor='#5f27cd', categoria='Familiar', google_event_id=None, localizacao=None, recorrencia=None, db_path=None):
+def save_event(titulo, data, hora, responsavel='Família', cor='#5f27cd', categoria='Familiar', google_event_id=None, localizacao=None, recorrencia=None, db_path=None, conn=None):
     """Saves a new event in the database."""
     target_path = db_path if db_path else DATABASE_PATH
-    conn = get_db_connection(target_path)
+    should_close = False
+    if conn is None:
+        conn = get_db_connection(target_path)
+        should_close = True
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO eventos (titulo, data, hora, responsavel, cor, categoria, google_event_id, localizacao, recorrencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (titulo, data, hora, responsavel, cor, categoria, google_event_id, localizacao, recorrencia)
     )
-    conn.commit()
+    if should_close:
+        conn.commit()
     event_id = cursor.lastrowid
-    conn.close()
+    if should_close:
+        conn.close()
     return event_id
 
 def delete_event(event_id, db_path=None):
@@ -318,13 +326,21 @@ def update_event(event_id, titulo, data, hora, responsavel='Família', cor='#5f2
     )
     conn.commit()
     conn.close()
-def seed_tasks(db_path=None):
+def seed_tasks(db_path=None, conn=None):
     import datetime
     import random
     target_path = db_path if db_path else DATABASE_PATH
     
-    # We will generate tasks for the week of June 14, 2026 (Sunday) to June 20, 2026 (Saturday)
-    start_date = datetime.date(2026, 6, 14)
+    should_close = False
+    if conn is None:
+        conn = get_db_connection(target_path)
+        should_close = True
+        conn.execute("BEGIN IMMEDIATE")
+        
+    cursor = conn.cursor()
+    
+    # We will generate tasks for the week of June 15, 2026 (Monday) to June 21, 2026 (Sunday)
+    start_date = datetime.date(2026, 6, 15)
     
     # 1. Isa's tasks - directly assigned to Isa
     isa_templates = [
@@ -341,7 +357,7 @@ def seed_tasks(db_path=None):
         ('Preparar a mochila', 'Infantil', 'Fácil', 10, 1, '20:45', [1, 2, 3, 4, 5], {})
     ]
     
-    # 2. Cassi/Mari shared tasks - to be split 50/50 randomly
+    # 2. Cassi/Mari shared tasks - to be split 50/50 randomly (excluding daily clutter focus)
     shared_templates = [
         # (title, category, difficulty, xp, gold, default_time, days, {day_of_week: time_override})
         ('Verificar ração dos gatos', 'Pets', 'Fácil', 10, 1, '08:00', [1, 4], {}),
@@ -356,8 +372,7 @@ def seed_tasks(db_path=None):
         ('Guardar roupa', 'Limpeza', 'Fácil', 10, 3, '20:00', [1], {}),
         ('Tirar o lixo', 'Organização', 'Fácil', 10, 3, '19:30', [5], {}),
         ('Limpar a areia dos gatos', 'Pets', 'Difícil', 25, 5, '19:30', [0, 2, 4, 6], {0: '10:00', 2: '08:30', 6: '10:00'}),
-        ('Pia da cozinha', 'Limpeza', 'Fácil', 10, 1, '20:30', [0, 1, 2, 3, 4, 5, 6], {}),
-        ('15 minutos apagando foco de bagunça', 'Organização', 'Médio', 15, 3, '19:45', [0, 1, 2, 3, 4, 5, 6], {})
+        ('Pia da cozinha', 'Limpeza', 'Fácil', 10, 1, '20:30', [0, 1, 2, 3, 4, 5, 6], {})
     ]
     
     user_colors = {
@@ -370,7 +385,7 @@ def seed_tasks(db_path=None):
     for offset in range(7):
         current_date = start_date + datetime.timedelta(days=offset)
         date_str = current_date.strftime('%Y-%m-%d')
-        day_of_week = (offset + 0) % 7 # Sunday is 0
+        day_of_week = int(current_date.strftime('%w')) # Sunday is 0, Monday is 1...
         
         for title, category, difficulty, xp, gold, time_str, days, overrides in isa_templates:
             if day_of_week in days:
@@ -384,25 +399,22 @@ def seed_tasks(db_path=None):
                     responsavel='Isa',
                     cor=color,
                     categoria=category,
-                    db_path=target_path
+                    db_path=target_path,
+                    conn=conn
                 )
                 
                 # Insert task
-                conn = get_db_connection(target_path)
-                cursor = conn.conn.cursor() if hasattr(conn, 'conn') else conn.cursor()
                 cursor.execute('''
                     INSERT INTO tarefas (usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, completed, data, hora, evento_calendario_id)
                     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
                 ''', ('Isa', title, category, difficulty, xp, gold, date_str, t_str, event_id))
-                conn.commit()
-                conn.close()
                 
     # Generate all Cassi/Mari shared instances
     shared_instances = []
     for offset in range(7):
         current_date = start_date + datetime.timedelta(days=offset)
         date_str = current_date.strftime('%Y-%m-%d')
-        day_of_week = (offset + 0) % 7 # Sunday is 0
+        day_of_week = int(current_date.strftime('%w')) # Sunday is 0, Monday is 1...
         
         for title, category, difficulty, xp, gold, time_str, days, overrides in shared_templates:
             if day_of_week in days:
@@ -430,15 +442,39 @@ def seed_tasks(db_path=None):
             responsavel=user,
             cor=color,
             categoria=inst['categoria'],
-            db_path=target_path
+            db_path=target_path,
+            conn=conn
         )
         
-        conn = get_db_connection(target_path)
-        cursor = conn.conn.cursor() if hasattr(conn, 'conn') else conn.cursor()
         cursor.execute('''
             INSERT INTO tarefas (usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, completed, data, hora, evento_calendario_id)
             VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
         ''', (user, inst['titulo'], inst['categoria'], inst['dificuldade'], inst['reward_xp'], inst['reward_gold'], inst['data'], inst['hora'], event_id))
+
+    # Generate daily clutter focus tasks for both Cassi and Mari
+    for offset in range(7):
+        current_date = start_date + datetime.timedelta(days=offset)
+        date_str = current_date.strftime('%Y-%m-%d')
+        
+        for user in ['Cassi', 'Mari']:
+            color = user_colors[user]
+            event_id = save_event(
+                titulo=f"Tarefa {user}: 15 minutos apagando foco de bagunça",
+                data=date_str,
+                hora='19:45',
+                responsavel=user,
+                cor=color,
+                categoria='Organização',
+                db_path=target_path,
+                conn=conn
+            )
+            
+            cursor.execute('''
+                INSERT INTO tarefas (usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, completed, data, hora, evento_calendario_id)
+                VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+            ''', (user, '15 minutos apagando foco de bagunça', 'Organização', 'Médio', 15, 3, date_str, '19:45', event_id))
+
+    if should_close:
         conn.commit()
         conn.close()
 
@@ -651,9 +687,6 @@ def reset_tasks_db(db_path=None):
     # Delete all from tarefas
     cursor.execute("DELETE FROM tarefas")
     
-    # Reset user stats to level 1, 0 XP, 0 Gold
-    cursor.execute("UPDATE usuarios SET xp = 0, gold = 0, nivel = 1, xp_to_next_level = 100")
-    
     conn.commit()
     conn.close()
     
@@ -696,6 +729,29 @@ def save_reward(usuario_nome, titulo, custo, icone, db_path=None):
     reward_id = cursor.lastrowid
     conn.close()
     return reward_id
+
+def update_reward_in_db(reward_id, usuario_nome, titulo, custo, icone, db_path=None):
+    """Updates an existing reward in the database by its ID."""
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE recompensas SET usuario_nome = ?, titulo = ?, custo = ?, icone = ? WHERE id = ?",
+        (usuario_nome, titulo, custo, icone, reward_id)
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+def delete_reward_in_db(reward_id, db_path=None):
+    """Deletes a reward by ID."""
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM recompensas WHERE id = ?", (reward_id,))
+    conn.commit()
+    conn.close()
+    return True
 
 def redeem_reward_in_db(reward_id, db_path=None):
     target_path = db_path if db_path else DATABASE_PATH

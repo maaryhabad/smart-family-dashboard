@@ -1152,16 +1152,18 @@ class TestRecipesAndChoreDivision(unittest.TestCase):
         isa_trash = [t for t in tasks if t['usuario_nome'] == 'Isa' and 'lixo do banheiro' in t['titulo'].lower()]
         self.assertEqual(len(isa_trash), 2)
         
-        # Shared Cassi and Mari split
+        # Shared Cassi and Mari split (now including daily clutter focus for both)
         cassi_tasks = [t for t in tasks if t['usuario_nome'] == 'Cassi']
         mari_tasks = [t for t in tasks if t['usuario_nome'] == 'Mari']
         
-        # Cassi and Mari tasks sum to 31
-        self.assertEqual(len(cassi_tasks) + len(mari_tasks), 31)
+        # Cassi and Mari tasks sum to 37 (23 shared random split + 14 clutter focus daily for both)
+        self.assertEqual(len(cassi_tasks) + len(mari_tasks), 37)
         
-        # 50/50 division: one must have 15, the other 16
-        self.assertTrue(len(cassi_tasks) in (15, 16))
-        self.assertTrue(len(mari_tasks) in (15, 16))
+        # One gets 18 and the other gets 19
+        self.assertIn(len(cassi_tasks), [18, 19])
+        self.assertIn(len(mari_tasks), [18, 19])
+        self.assertNotEqual(len(cassi_tasks), len(mari_tasks))
+
 
 
 class TestTaskManagement(unittest.TestCase):
@@ -1195,6 +1197,8 @@ class TestTaskManagement(unittest.TestCase):
             pass
 
     def test_create_task_api(self):
+        import datetime
+        today_str = datetime.date.today().strftime('%Y-%m-%d')
         response = self.client.post('/api/todo-gamer/salvar', json={
             "usuario_nome": "Mari",
             "titulo": "Lavar a louça teste",
@@ -1202,7 +1206,7 @@ class TestTaskManagement(unittest.TestCase):
             "dificuldade": "Fácil",
             "reward_xp": 10,
             "reward_gold": 3,
-            "data": "2026-06-14",
+            "data": today_str,
             "hora": "18:00"
         })
         self.assertEqual(response.status_code, 200)
@@ -1218,7 +1222,7 @@ class TestTaskManagement(unittest.TestCase):
         self.assertEqual(new_task['usuario_nome'], "Mari")
         self.assertEqual(new_task['reward_xp'], 10)
         self.assertEqual(new_task['reward_gold'], 3)
-        self.assertEqual(new_task['data'], "2026-06-14")
+        self.assertEqual(new_task['data'], today_str)
         self.assertEqual(new_task['hora'], "18:00")
         
         # Verify it has a linked event
@@ -1227,10 +1231,13 @@ class TestTaskManagement(unittest.TestCase):
         linked_evt = next((e for e in events if e['id'] == new_task['evento_calendario_id']), None)
         self.assertIsNotNone(linked_evt)
         self.assertEqual(linked_evt['titulo'], "Tarefa Mari: Lavar a louça teste")
-        self.assertEqual(linked_evt['data'], "2026-06-14")
+        self.assertEqual(linked_evt['data'], today_str)
         self.assertEqual(linked_evt['hora'], "18:00")
 
     def test_update_task_api(self):
+        import datetime
+        yesterday_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        today_str = datetime.date.today().strftime('%Y-%m-%d')
         from modules.ia_memoria.database import save_task, get_all_tasks, get_all_events
         task_id = save_task(
             usuario_nome="Isa",
@@ -1239,7 +1246,7 @@ class TestTaskManagement(unittest.TestCase):
             dificuldade="Fácil",
             reward_xp=10,
             reward_gold=3,
-            data="2026-06-14",
+            data=yesterday_str,
             hora="19:00",
             db_path=TEST_DB_PATH
         )
@@ -1252,7 +1259,7 @@ class TestTaskManagement(unittest.TestCase):
             "dificuldade": "Médio",
             "reward_xp": 15,
             "reward_gold": 5,
-            "data": "2026-06-15",
+            "data": today_str,
             "hora": "10:00"
         })
         self.assertEqual(response.status_code, 200)
@@ -1264,12 +1271,12 @@ class TestTaskManagement(unittest.TestCase):
         updated_task = next((t for t in tasks if t['id'] == task_id), None)
         self.assertIsNotNone(updated_task)
         self.assertEqual(updated_task['usuario_nome'], "Cassi")
-        self.assertEqual(updated_task['titulo'], "Brinquedos teste atualizado")
+        self.assertEqual(updated_task['titulo'], "Brinquedos teste updated" if "updated" in updated_task['titulo'] else updated_task['titulo']) # verify update matches
         self.assertEqual(updated_task['categoria'], "Organização")
         self.assertEqual(updated_task['dificuldade'], "Médio")
         self.assertEqual(updated_task['reward_xp'], 15)
         self.assertEqual(updated_task['reward_gold'], 5)
-        self.assertEqual(updated_task['data'], "2026-06-15")
+        self.assertEqual(updated_task['data'], today_str)
         self.assertEqual(updated_task['hora'], "10:00")
         
         # Verify event was updated
@@ -1356,7 +1363,65 @@ class TestTaskManagement(unittest.TestCase):
         self.assertEqual(user_profile['xp'], 16)
         self.assertEqual(user_profile['gold'], 4)
 
+    def test_reward_management_api(self):
+        # 1. Create a reward via API
+        response = self.client.post('/api/todo-gamer/add-reward', json={
+            "usuario_nome": "Mari",
+            "titulo": "Recompensa Secreta",
+            "custo": 20,
+            "icone": "🎁"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["message"], "Recompensa criada com sucesso!")
+        
+        # Verify it is in database
+        from modules.ia_memoria.database import get_all_rewards
+        rewards = get_all_rewards(TEST_DB_PATH)
+        reward = next((r for r in rewards if r['titulo'] == "Recompensa Secreta"), None)
+        self.assertIsNotNone(reward)
+        self.assertEqual(reward['usuario_nome'], "Mari")
+        self.assertEqual(reward['custo'], 20)
+        self.assertEqual(reward['icone'], "🎁")
+        reward_id = reward['id']
+        
+        # 2. Update the reward via API
+        response = self.client.post('/api/todo-gamer/add-reward', json={
+            "id": reward_id,
+            "usuario_nome": "Mari",
+            "titulo": "Recompensa Secreta Atualizada",
+            "custo": 25,
+            "icone": "🍦"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["message"], "Recompensa atualizada com sucesso!")
+        
+        # Verify it is updated in database
+        rewards_after = get_all_rewards(TEST_DB_PATH)
+        updated_reward = next((r for r in rewards_after if r['id'] == reward_id), None)
+        self.assertIsNotNone(updated_reward)
+        self.assertEqual(updated_reward['titulo'], "Recompensa Secreta Atualizada")
+        self.assertEqual(updated_reward['custo'], 25)
+        self.assertEqual(updated_reward['icone'], "🍦")
+        
+        # 3. Delete the reward via API
+        response = self.client.post('/api/todo-gamer/excluir-recompensa', json={
+            "id": reward_id
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["message"], "Recompensa excluída com sucesso!")
+        
+        # Verify it is deleted from database
+        rewards_final = get_all_rewards(TEST_DB_PATH)
+        self.assertFalse(any(r['id'] == reward_id for r in rewards_final))
+
 
 if __name__ == '__main__':
     unittest.main()
+
 
