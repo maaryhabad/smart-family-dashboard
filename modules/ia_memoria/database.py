@@ -344,17 +344,18 @@ def seed_tasks(db_path=None, conn=None):
     
     # 1. Isa's tasks - directly assigned to Isa
     isa_templates = [
-        # (title, category, difficulty, xp, gold, default_time, days, {day_of_week: time_override})
-        ('Verificar água dos gatos', 'Pets', 'Fácil', 10, 1, '19:30', [2, 0], {0: '10:00'}),
-        ('Tirar o lixo do banheiro', 'Limpeza', 'Difícil', 25, 5, '19:30', [3, 6], {6: '13:00'}),
-        ('Encher a garrafa de água da Isa do quarto', 'Organização', 'Médio', 15, 3, '20:00', [0, 1, 2, 3, 4, 5, 6], {}),
-        ('Banho', 'Geral', 'Fácil', 10, 1, '20:15', [0, 1, 2, 3, 4, 5, 6], {}),
-        ('Banho e lavar cabelo', 'Geral', 'Fácil', 10, 1, '20:15', [0, 2, 4, 6], {}),
-        ('Sapatos na sapateira', 'Organização', 'Fácil', 10, 1, '19:45', [0, 1, 2, 3, 4, 5, 6], {}),
-        ('Roupa suja no cesto', 'Organização', 'Fácil', 10, 1, '20:30', [0, 1, 2, 3, 4, 5, 6], {}),
-        ('Escovar os dentes', 'Geral', 'Fácil', 10, 1, '21:00', [0, 1, 2, 3, 4, 5, 6], {}),
-        ('Guardar brinquedos', 'Infantil', 'Difícil', 25, 5, '17:00', [6, 0], {}),
-        ('Preparar a mochila', 'Infantil', 'Fácil', 10, 1, '20:45', [1, 2, 3, 4, 5], {})
+        # (title, category, difficulty, xp, gold, default_time, days, {day_of_week: time_override}, recurrence)
+        ('Verificar água dos gatos', 'Pets', 'Fácil', 10, 1, '19:30', [2, 0], {0: '10:00'}, None),
+        ('Tirar o lixo do banheiro', 'Limpeza', 'Difícil', 25, 5, '19:30', [3, 6], {6: '13:00'}, None),
+        ('Encher a garrafa de água da Isa do quarto', 'Organização', 'Médio', 15, 3, '20:00', [0, 2, 4, 6], {}, None),
+        ('Banho', 'Geral', 'Fácil', 10, 1, '20:15', [1, 3, 5], {}, None),
+        ('Banho e lavar cabelo', 'Geral', 'Fácil', 10, 1, '20:15', [0, 2, 4, 6], {}, None),
+        ('Sapatos na sapateira', 'Organização', 'Fácil', 10, 1, '19:45', [0, 1, 2, 3, 4, 5, 6], {}, None),
+        ('Roupa suja no cesto', 'Organização', 'Fácil', 10, 1, '20:30', [0, 1, 2, 3, 4, 5, 6], {}, None),
+        ('Escovar os dentes', 'Geral', 'Fácil', 10, 1, '21:00', [0, 1, 2, 3, 4, 5, 6], {}, None),
+        ('Guardar brinquedos', 'Infantil', 'Difícil', 25, 5, '17:00', [6, 0], {}, None),
+        ('Preparar a mochila', 'Infantil', 'Fácil', 10, 1, '20:45', [1, 2, 3, 4, 5], {}, None),
+        ('Preparar a roupa da escola', 'Infantil', 'Fácil', 10, 1, '20:45', [1, 2, 3, 4, 5], {}, None)
     ]
     
     # 2. Cassi/Mari shared tasks - to be split 50/50 randomly (excluding daily clutter focus)
@@ -362,15 +363,15 @@ def seed_tasks(db_path=None, conn=None):
         # (title, category, difficulty, xp, gold, default_time, days, {day_of_week: time_override})
         ('Verificar ração dos gatos', 'Pets', 'Fácil', 10, 1, '08:00', [1, 4], {}),
         ('Lavar lençóis e toalhas', 'Limpeza', 'Médio', 15, 5, '09:00', [0], {}),
-        ('Arrumar a sala', 'Organização', 'Ultra', 40, 10, '14:00', [6], {}),
-        ('Arrumar quarto', 'Organização', 'Ultra', 40, 10, '10:00', [6], {}),
-        ('Lavar banheiro', 'Limpeza', 'Ultra', 40, 10, '11:00', [6], {}),
-        ('Arrumar sala de jogos', 'Organização', 'Ultra', 40, 10, '15:00', [6], {}),
-        ('Limpar quarto da Isa', 'Limpeza', 'Médio', 15, 5, '16:00', [6], {}),
-        ('Lavar roupa', 'Limpeza', 'Fácil', 10, 3, '08:30', [1], {}),
-        ('Dobrar roupa', 'Limpeza', 'Médio', 15, 5, '19:30', [1], {}),
-        ('Guardar roupa', 'Limpeza', 'Fácil', 10, 3, '20:00', [1], {}),
-        ('Tirar o lixo', 'Organização', 'Fácil', 10, 3, '19:30', [5], {}),
+        ('Arrumar a sala', 'Organização', 'Ultra', 40, 10, '14:00', [2, 6], {}),
+        ('Arrumar quarto', 'Organização', 'Ultra', 40, 10, '10:00', [1, 4], {}),
+        ('Lavar banheiro', 'Limpeza', 'Ultra', 40, 10, '11:00', [7], {}),
+        ('Arrumar sala de jogos', 'Organização', 'Ultra', 40, 10, '15:00', [3], {}),
+        ('Aspirar quarto da Isa', 'Limpeza', 'Médio', 15, 5, '16:00', [6], {}),
+        ('Lavar roupa', 'Limpeza', 'Fácil', 10, 3, '08:30', [1, 4], {}),
+        ('Dobrar roupa', 'Limpeza', 'Médio', 15, 5, '19:30', [2, 5], {}),
+        ('Guardar roupa', 'Limpeza', 'Fácil', 10, 3, '20:00', [2, 5], {}),
+        ('Tirar o lixo', 'Organização', 'Fácil', 10, 3, '19:30', [3, 6], {}),
         ('Limpar a areia dos gatos', 'Pets', 'Difícil', 25, 5, '19:30', [0, 2, 4, 6], {0: '10:00', 2: '08:30', 6: '10:00'}),
         ('Pia da cozinha', 'Limpeza', 'Fácil', 10, 1, '20:30', [0, 1, 2, 3, 4, 5, 6], {})
     ]
@@ -387,7 +388,7 @@ def seed_tasks(db_path=None, conn=None):
         date_str = current_date.strftime('%Y-%m-%d')
         day_of_week = int(current_date.strftime('%w')) # Sunday is 0, Monday is 1...
         
-        for title, category, difficulty, xp, gold, time_str, days, overrides in isa_templates:
+        for title, category, difficulty, xp, gold, time_str, days, overrides, recurrence in isa_templates:
             if day_of_week in days:
                 t_str = overrides.get(day_of_week, time_str)
                 # Save calendar event
@@ -399,6 +400,7 @@ def seed_tasks(db_path=None, conn=None):
                     responsavel='Isa',
                     cor=color,
                     categoria=category,
+                    recorrencia=recurrence,
                     db_path=target_path,
                     conn=conn
                 )
@@ -562,7 +564,7 @@ def get_all_tasks(db_path=None):
     conn.close()
     return tasks
 
-def save_task(usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, data, hora, evento_calendario_id=None, db_path=None):
+def save_task(usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, data, hora, evento_calendario_id=None, recorrencia=None, db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     
     # If no calendar event id is provided, create it first
@@ -580,6 +582,7 @@ def save_task(usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_go
             responsavel=usuario_nome,
             cor=color,
             categoria=categoria,
+            recorrencia=recorrencia,
             db_path=target_path
         )
         
@@ -791,7 +794,7 @@ def redeem_reward_in_db(reward_id, db_path=None):
     
     return True, "Recompensa resgatada com sucesso!", get_user_by_name(user_nome, target_path)
 
-def update_task_in_db(task_id, usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, data, hora, db_path=None):
+def update_task_in_db(task_id, usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, data, hora, recorrencia=None, db_path=None):
     """Updates an existing task in the database and updates its associated calendar event if linked."""
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
@@ -819,9 +822,9 @@ def update_task_in_db(task_id, usuario_nome, titulo, categoria, dificuldade, rew
         color = user_colors.get(usuario_nome, '#5f27cd')
         cursor.execute('''
             UPDATE eventos
-            SET titulo = ?, data = ?, hora = ?, responsavel = ?, cor = ?, categoria = ?
+            SET titulo = ?, data = ?, hora = ?, responsavel = ?, cor = ?, categoria = ?, recorrencia = ?
             WHERE id = ?
-        ''', (f"Tarefa {usuario_nome}: {titulo}", data, hora, usuario_nome, color, categoria, evt_id))
+        ''', (f"Tarefa {usuario_nome}: {titulo}", data, hora, usuario_nome, color, categoria, recorrencia, evt_id))
         
     conn.commit()
     conn.close()
