@@ -7,6 +7,20 @@ let lastUserMessage = "";
 let activeGamerMember = "Mari";
 let activeRewardTab = "avail";
 
+const goldCoinSvg = `
+<svg class="gold-coin-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="12" r="10" fill="url(#goldGradientJS)" stroke="#e1b12c" stroke-width="1.5"/>
+    <circle cx="12" cy="12" r="7" fill="none" stroke="#fbc531" stroke-width="1" stroke-dasharray="1.5 1.5"/>
+    <path d="M14.5 9.5C14 8.2 12.8 7.5 11.5 7.5C9.3 7.5 7.5 9.3 7.5 12C7.5 14.7 9.3 16.5 11.5 16.5C13.5 16.5 14.5 15.2 14.5 13.5H11.5" stroke="#d35400" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <defs>
+        <radialGradient id="goldGradientJS" cx="12" cy="12" r="10" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#feca57"/>
+            <stop offset="70%" stop-color="#ffb142"/>
+            <stop offset="100%" stop-color="#d35400"/>
+        </radialGradient>
+    </defs>
+</svg>`;
+
 
 // ==========================================================================
 // INITIALIZATION
@@ -53,7 +67,8 @@ function showToast(message, type = 'info') {
     if (type === 'success') icon = '✅';
     if (type === 'warning') icon = '⚠️';
 
-    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    const renderedMessage = message.replace(/🪙/g, goldCoinSvg);
+    toast.innerHTML = `<span>${icon}</span> <span>${renderedMessage}</span>`;
     container.appendChild(toast);
 
     // Remove toast after animation ends
@@ -1069,7 +1084,7 @@ function appendMessage(content, sender) {
 
     // Create text element
     const textSpan = document.createElement('span');
-    textSpan.innerHTML = content;
+    textSpan.innerHTML = content.replace(/🪙/g, goldCoinSvg);
     msgDiv.appendChild(textSpan);
 
     // If it's an AI message, add a WhatsApp share link
@@ -1483,7 +1498,7 @@ function renderEventsList() {
                             <span class="event-card-title" style="font-weight: 600;">${evt.title}</span>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.75rem;">
                                 <span class="${statusClass}" style="font-weight: 500;">${statusIcon} ${statusText}</span>
-                                <span style="color: var(--color-yellow); font-weight: 600;">🔵 ${evt.reward_xp} XP | 🪙 ${evt.reward_gold} G</span>
+                                <span style="color: var(--color-yellow); font-weight: 600; display: inline-flex; align-items: center; gap: 2px;">🔵 ${evt.reward_xp} XP | ${goldCoinSvg} ${evt.reward_gold} G</span>
                             </div>
                         </div>
                     </div>
@@ -1952,7 +1967,7 @@ function updateGamerUI() {
                         ${overdueBadge}
                         <div class="rewards-pills-row">
                             <span class="xp-pill">🔵 +${quest.reward_xp} XP</span>
-                            <span class="gold-pill">🪙 +${quest.reward_gold} Gold</span>
+                            <span class="gold-pill" style="display: inline-flex; align-items: center; gap: 2px;">${goldCoinSvg} +${quest.reward_gold} Gold</span>
                         </div>
                     </div>
                 </div>
@@ -2024,7 +2039,7 @@ function updateGamerUI() {
                     <span class="reward-card-icon">${rew.icone}</span>
                     <div class="reward-card-details">
                         <span class="reward-card-title">${rew.titulo}</span>
-                        <span class="reward-card-cost">🪙 ${rew.custo} Ouro</span>
+                        <span class="reward-card-cost" style="display: inline-flex; align-items: center; gap: 2px;">${goldCoinSvg} ${rew.custo} Ouro</span>
                     </div>
                 </div>
                 <div class="reward-actions" style="display: flex; align-items: center; gap: 8px;">

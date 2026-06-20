@@ -89,30 +89,55 @@ def parse_recipe_details(message):
                 break
                 
     if not prefix_found:
-        return None
+        # Fallback for raw pasted recipes without standard prefixes
+        # Check if the message contains instructions/preparation keywords AND ingredients indicators
+        has_inst = any(kw in msg_lower for kw in ['passo a passo', 'modo de preparo', 'preparo', 'instrucoes', 'instruções', 'modo de fazer'])
+        has_ing = any(kw in msg_lower for kw in ['ingredientes', 'farinha', 'açúcar', 'acucar', 'leite', 'ovo', 'ovos', 'colher', 'chá', 'cha', 'g de', 'ml de', 'gramas', 'fermento'])
         
-    after_prefix = message[len(prefix_found):].strip()
-    after_prefix_lower = after_prefix.lower()
-    
+        if has_inst and has_ing:
+            # We treat the whole message as the recipe
+            # Try to determine a name from the first non-empty line
+            lines = [line.strip() for line in message.split('\n') if line.strip()]
+            recipe_name = "Receita"
+            if lines:
+                first_line = lines[0]
+                first_line_clean = first_line.strip('🥣:-*• \t')
+                if len(first_line_clean) < 60 and not any(k in first_line_clean.lower() for k in ['ingredientes', 'passo a passo', 'modo de preparo']):
+                    recipe_name = first_line_clean
+                    
+            after_prefix = message.strip()
+            after_prefix_lower = after_prefix.lower()
+        else:
+            return None
+    else:
+        after_prefix = message[len(prefix_found):].strip()
+        after_prefix_lower = after_prefix.lower()
+        
     # End of recipe name is colon, newline or key terms
-    end_idx = len(after_prefix)
-    for sep in [':', '\n', 'ingredientes', 'passo a passo', 'modo de preparo', 'preparo']:
-        idx = after_prefix_lower.find(sep)
-        if idx != -1 and idx < end_idx:
-            end_idx = idx
+    if prefix_found:
+        end_idx = len(after_prefix)
+        for sep in [':', '\n', 'ingredientes', 'passo a passo', 'modo de preparo', 'preparo']:
+            idx = after_prefix_lower.find(sep)
+            if idx != -1 and idx < end_idx:
+                end_idx = idx
+        recipe_name = after_prefix[:end_idx].strip()
+        recipe_name = recipe_name.strip(',. ')
+        content_part = after_prefix[end_idx:].strip()
+    else:
+        # For raw pasted recipes, name is already parsed from first line, so content_part is the rest of the message
+        first_line_len = message.find('\n')
+        if first_line_len != -1:
+            content_part = message[first_line_len:].strip()
+        else:
+            content_part = message.strip()
             
-    recipe_name = after_prefix[:end_idx].strip()
-    recipe_name = recipe_name.strip(',. ')
-    
-    content_part = after_prefix[end_idx:].strip()
     while content_part and content_part[0] in [':', ',', '.', ' ', '-', '\n']:
         content_part = content_part[1:].strip()
         
     content_part_lower = content_part.lower()
-    ing_idx = content_part_lower.find('ingredientes')
     
     inst_idx = -1
-    for inst_kw in ['passo a passo', 'modo de preparo', 'preparo', 'instrucoes', 'instruções']:
+    for inst_kw in ['passo a passo', 'modo de preparo', 'preparo', 'instrucoes', 'instruções', 'modo de fazer']:
         idx = content_part_lower.find(inst_kw)
         if idx != -1:
             inst_idx = idx
@@ -121,32 +146,46 @@ def parse_recipe_details(message):
     ingredients_text = ""
     instructions_text = ""
     
-    if ing_idx != -1 and inst_idx != -1:
-        if ing_idx < inst_idx:
-            ing_section = content_part[ing_idx:inst_idx].strip()
-            inst_section = content_part[inst_idx:].strip()
+    if inst_idx != -1:
+        ingredients_part = content_part[:inst_idx].strip()
+        instructions_part = content_part[inst_idx:].strip()
+        
+        # Clean "ingredientes" header from ingredients_part if present
+        ing_part_lower = ingredients_part.lower()
+        ing_header_idx = ing_part_lower.find('ingredientes')
+        if ing_header_idx != -1:
+            ingredients_text = ingredients_part[ing_header_idx + len('ingredientes'):].strip()
         else:
-            inst_section = content_part[inst_idx:ing_idx].strip()
-            ing_section = content_part[ing_idx:].strip()
+            ingredients_text = ingredients_part
             
-        ing_section_lower = ing_section.lower()
-        start_ing = ing_section_lower.find('ingredientes') + len('ingredientes')
-        ingredients_text = ing_section[start_ing:].strip()
         while ingredients_text and ingredients_text[0] in [':', ',', '.', ' ', '-', '\n']:
             ingredients_text = ingredients_text[1:].strip()
             
-        inst_section_lower = inst_section.lower()
+        # Clean preparation header from instructions_part
+        while instructions_part and not instructions_part[0].isalnum():
+            instructions_part = instructions_part[1:].strip()
+            
+        inst_part_lower = instructions_part.lower()
         matched_kw = None
-        for inst_kw in ['passo a passo', 'modo de preparo', 'preparo', 'instrucoes', 'instruções']:
-            if inst_section_lower.startswith(inst_kw):
+        for inst_kw in ['passo a passo', 'modo de preparo', 'preparo', 'instrucoes', 'instruções', 'modo de fazer']:
+            if inst_part_lower.startswith(inst_kw):
                 matched_kw = inst_kw
                 break
         start_inst = len(matched_kw) if matched_kw else 0
-        instructions_text = inst_section[start_inst:].strip()
-        while instructions_text and instructions_text[0] in [':', ',', '.', ' ', '-', '\n']:
+        instructions_text = instructions_part[start_inst:].strip()
+        while instructions_text and instructions_text[0] in [':', ',', '.', ' ', '-', '\n', '🥣']:
             instructions_text = instructions_text[1:].strip()
     else:
-        ingredients_text = content_part
+        # No instructions header, treat everything as ingredients
+        ingredients_part = content_part.strip()
+        ing_part_lower = ingredients_part.lower()
+        ing_header_idx = ing_part_lower.find('ingredientes')
+        if ing_header_idx != -1:
+            ingredients_text = ingredients_part[ing_header_idx + len('ingredientes'):].strip()
+        else:
+            ingredients_text = ingredients_part
+        while ingredients_text and ingredients_text[0] in [':', ',', '.', ' ', '-', '\n']:
+            ingredients_text = ingredients_text[1:].strip()
         instructions_text = ""
         
     return {
@@ -222,7 +261,9 @@ def parse_intent_locally(message):
                     return 'deletar_receita', {'receita': recipe_name}
                     
     # Save/Edit recipe
-    if 'receita' in msg and any(kw in msg for kw in ['salvar', 'registrar', 'cadastrar', 'adicionar', 'editar', 'alterar', 'atualizar', 'modificar']):
+    is_recipe_action = 'receita' in msg and any(kw in msg for kw in ['salvar', 'registrar', 'cadastrar', 'adicionar', 'editar', 'alterar', 'atualizar', 'modificar'])
+    is_raw_recipe = any(kw in msg for kw in ['modo de preparo', 'passo a passo', 'modo de fazer', 'instrucoes', 'instruções']) and any(kw in msg for kw in ['ingredientes', 'farinha', 'açúcar', 'acucar', 'leite', 'ovo', 'ovos', 'colher', 'fermento'])
+    if is_recipe_action or is_raw_recipe:
         recipe_details = parse_recipe_details(message)
         if recipe_details:
             return 'salvar_receita', recipe_details

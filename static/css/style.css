@@ -890,6 +890,9 @@ h1, h2, h3, h4, h5, h6 {
 .modal-content {
     width: 90%;
     max-width: 500px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     border: 1px solid var(--border-glass-light);
     border-radius: var(--border-radius-lg);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
@@ -931,6 +934,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .modal-body {
     padding: 1.5rem;
+    overflow-y: auto;
+    flex-grow: 1;
 }
 
 .form-group {
@@ -1486,13 +1491,25 @@ h1, h2, h3, h4, h5, h6 {
     display: inline-block;
     font-size: 1.8rem;
     margin-bottom: 0.1rem;
+}
+
+.gold-coin-svg {
+    width: 1.1em;
+    height: 1.1em;
+    vertical-align: -0.12em;
+    display: inline-block;
+    margin: 0 2px;
+    filter: drop-shadow(0 1.5px 3px rgba(254, 202, 87, 0.4));
     animation: goldSpin 4s linear infinite;
 }
 
 @keyframes goldSpin {
-    0% { transform: rotateY(0deg); }
-    10% { transform: rotateY(360deg); }
-    100% { transform: rotateY(360deg); }
+    0% { transform: scaleX(1); }
+    2.5% { transform: scaleX(0); }
+    5% { transform: scaleX(-1); }
+    7.5% { transform: scaleX(0); }
+    10% { transform: scaleX(1); }
+    100% { transform: scaleX(1); }
 }
 
 .gold-val {

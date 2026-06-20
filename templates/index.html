@@ -162,7 +162,7 @@
 
                             <!-- Suggested Query Chips -->
                             <div class="chat-chips">
-                                <span class="chip" onclick="sendSuggested('Qual a senha do Wi-Fi de visitas?')">🔑 Senha
+                                <span class="chip" onclick="sendSuggested('Qual a senha do Wi-Fi?')">🔑 Senha
                                     do Wi-Fi</span>
                                 <span class="chip" onclick="sendSuggested('Onde está a chave reserva do carro?')">🔑
                                     Chave reserva</span>
@@ -398,7 +398,28 @@
                                 </div>
                             </div>
                             <div class="gold-counter">
-                                <span class="gold-icon">🪙</span>
+                                <span class="gold-icon">
+                                    <svg class="gold-coin-svg" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        style="width: 1.8rem; height: 1.8rem; vertical-align: middle;">
+                                        <circle cx="12" cy="12" r="10" fill="url(#goldGradient)" stroke="#e1b12c"
+                                            stroke-width="1.5" />
+                                        <circle cx="12" cy="12" r="7" fill="none" stroke="#fbc531" stroke-width="1"
+                                            stroke-dasharray="1.5 1.5" />
+                                        <path
+                                            d="M14.5 9.5C14 8.2 12.8 7.5 11.5 7.5C9.3 7.5 7.5 9.3 7.5 12C7.5 14.7 9.3 16.5 11.5 16.5C13.5 16.5 14.5 15.2 14.5 13.5H11.5"
+                                            stroke="#d35400" stroke-width="1.8" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                        <defs>
+                                            <radialGradient id="goldGradient" cx="12" cy="12" r="10"
+                                                gradientUnits="userSpaceOnUse">
+                                                <stop offset="0%" stop-color="#feca57" />
+                                                <stop offset="70%" stop-color="#ffb142" />
+                                                <stop offset="100%" stop-color="#d35400" />
+                                            </radialGradient>
+                                        </defs>
+                                    </svg>
+                                </span>
                                 <span class="gold-val" id="gamer-gold">0</span>
                                 <span class="gold-label">Ouro</span>
                             </div>
@@ -429,10 +450,17 @@
                                     <button class="btn btn-secondary btn-sm" id="btn-add-reward"
                                         style="font-size: 0.75rem; padding: 4px 8px;">+ Recompensa</button>
                                 </div>
-                                <div class="rewards-sub-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
-                                    <button class="reward-sub-tab-btn active" id="btn-rewards-avail" onclick="setRewardsFilter('avail')" style="background: none; border: none; border-bottom: 2px solid var(--color-primary); color: var(--text-white); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Disponíveis</button>
-                                    <button class="reward-sub-tab-btn" id="btn-rewards-redeemed" onclick="setRewardsFilter('redeemed')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Resgatadas</button>
-                                    <button class="reward-sub-tab-btn" id="btn-rewards-completed" onclick="setRewardsFilter('completed')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Concluídas</button>
+                                <div class="rewards-sub-tabs"
+                                    style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                                    <button class="reward-sub-tab-btn active" id="btn-rewards-avail"
+                                        onclick="setRewardsFilter('avail')"
+                                        style="background: none; border: none; border-bottom: 2px solid var(--color-primary); color: var(--text-white); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Disponíveis</button>
+                                    <button class="reward-sub-tab-btn" id="btn-rewards-redeemed"
+                                        onclick="setRewardsFilter('redeemed')"
+                                        style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Resgatadas</button>
+                                    <button class="reward-sub-tab-btn" id="btn-rewards-completed"
+                                        onclick="setRewardsFilter('completed')"
+                                        style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Concluídas</button>
                                 </div>
                                 <div class="rewards-list" id="rewards-list">
                                     <!-- Dynamically injected -->
@@ -678,7 +706,7 @@
                         <label style="display:block; margin-bottom:5px; font-weight:500;">Frase que você
                             digitou:</label>
                         <blockquote id="feedback-original-msg"
-                            style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-left: 3px solid #818cf8; border-radius: 4px; font-style: italic; margin: 0 0 15px 0; color: rgba(255,255,255,0.85);">
+                            style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-left: 3px solid #818cf8; border-radius: 4px; font-style: italic; margin: 0 0 15px 0; color: rgba(255,255,255,0.85); max-height: 150px; overflow-y: auto;">
                         </blockquote>
                     </div>
 
@@ -702,7 +730,8 @@
                             <option value="salvar_receita">Salvar receita culinária</option>
                             <option value="deletar_receita">Apagar/deletar receita culinária</option>
                             <option value="comprar_receita">Comprar ingredientes de uma receita</option>
-                            <option value="adicionar_transacao">Lançar despesa ou receita no controle financeiro</option>
+                            <option value="adicionar_transacao">Lançar despesa ou receita no controle financeiro
+                            </option>
                             <option value="conversa">Conversa geral ou saudação</option>
                         </select>
                     </div>

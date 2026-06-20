@@ -1120,6 +1120,20 @@ class TestRecipesAndChoreDivision(unittest.TestCase):
         self.assertEqual(res_conv['nome'].lower(), "pãozinho rápido de aveia na air fryer")
         self.assertIn("1 xícara de farinha", res_conv['ingredientes'])
 
+        # Test raw copy-pasted recipe without prefix
+        msg_raw = (
+            "Para a Massa do Bolo:\n"
+            "Farinha de aveia: 60g\n"
+            "Achocolatado em pó: 30g\n"
+            "Modo de Preparo Real\n"
+            "Passo 1: Misturar tudo"
+        )
+        res_raw = parse_recipe_details(msg_raw)
+        self.assertIsNotNone(res_raw)
+        self.assertEqual(res_raw['nome'].lower(), "para a massa do bolo")
+        self.assertIn("Farinha de aveia: 60g", res_raw['ingredientes'])
+        self.assertIn("Passo 1: Misturar tudo", res_raw['passo_a_passo'])
+
     def test_chat_salvar_receita(self):
         response = self.client.post('/api/ia-memoria/chat', json={
             "message": "salvar receita bolo de caneca: ingredientes: 1 ovo, 2 colheres de cacau. passo a passo: misturar e colocar no microondas"
