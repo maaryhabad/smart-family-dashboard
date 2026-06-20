@@ -106,6 +106,52 @@ def init_db(db_path=None):
                 google_event_id TEXT UNIQUE NOT NULL
             )
         ''')
+
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS despesas_recorrentes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            descricao TEXT NOT NULL,
+            valor REAL NOT NULL,
+            categoria TEXT,
+            dia_vencimento INTEGER,
+            tipo TEXT, -- 'Recorrente' ou 'Parcelado'
+            total_parcelas INTEGER DEFAULT 1,
+            parcela_atual INTEGER DEFAULT 1,
+            data_inicio DATE
+        )
+    ''')
+        try:
+            cursor.execute("ALTER TABLE despesas_recorrentes ADD COLUMN pago INTEGER DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+
+        # Create table transacoes
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS transacoes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                descricao TEXT NOT NULL,
+                valor REAL NOT NULL,
+                categoria TEXT NOT NULL,
+                data TEXT NOT NULL,
+                responsavel TEXT NOT NULL
+            )
+        ''')
+
+        cursor.execute("SELECT COUNT(*) FROM transacoes")
+        trans_count = cursor.fetchone()[0]
+        if trans_count == 0:
+            initial_transactions = [
+                ("Supermercado Carrefour", -450.20, "Alimentação", "10/06/2026", "Mariana"),
+                ("Salário Mensal", 12500.00, "Receita", "05/06/2026", "Empresa"),
+                ("Conta de Energia (Enel)", -280.30, "Habitação", "03/06/2026", "Rodrigo"),
+                ("Mensalidade Faculdade (Mariana)", -950.00, "Educação", "03/06/2026", "Mariana"),
+                ("Netflix Mensal", -55.90, "Lazer", "01/06/2026", "Família")
+            ]
+            cursor.executemany(
+                "INSERT INTO transacoes (descricao, valor, categoria, data, responsavel) VALUES (?, ?, ?, ?, ?)",
+                initial_transactions
+            )
         
         # Check if empty to seed initial values
         cursor.execute("SELECT COUNT(*) FROM memorias")
@@ -326,6 +372,7 @@ def update_event(event_id, titulo, data, hora, responsavel='Família', cor='#5f2
     )
     conn.commit()
     conn.close()
+
 def seed_tasks(db_path=None, conn=None):
     import datetime
     import random
@@ -756,6 +803,15 @@ def delete_reward_in_db(reward_id, db_path=None):
     conn.close()
     return True
 
+def complete_reward_in_db(reward_id, db_path=None):
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE recompensas SET resgatado = 2 WHERE id = ?", (reward_id,))
+    conn.commit()
+    conn.close()
+    return True
+
 def redeem_reward_in_db(reward_id, db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
@@ -859,3 +915,79 @@ def delete_task_in_db(task_id, db_path=None):
     conn.close()
     return True
 
+def update_despesa(id, descricao, valor, categoria, dia, tipo, total_parcelas):
+    conn = get_db_connection(DATABASE_PATH)
+    conn.execute('''
+        UPDATE despesas_recorrentes 
+        SET descricao = ?, valor = ?, categoria = ?, dia_vencimento = ?, tipo = ?, total_parcelas = ?
+        WHERE id = ?
+    ''', (descricao, valor, categoria, dia, tipo, total_parcelas, id))
+    conn.commit()
+    conn.close()
+
+def save_despesa(descricao, valor, categoria, dia, tipo, total_parcelas):
+    conn = get_db_connection(DATABASE_PATH)
+    conn.execute('''
+        INSERT INTO despesas_recorrentes 
+        (descricao, valor, categoria, dia_vencimento, tipo, total_parcelas)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (descricao, valor, categoria, dia, tipo, total_parcelas))
+    conn.commit()
+    conn.close()
+
+def get_all_despesas():
+    conn = get_db_connection(DATABASE_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM despesas_recorrentes')
+    despesas = cursor.fetchall()
+    conn.close()
+    return [dict(d) for d in despesas]
+
+def delete_despesa(id):
+    conn = get_db_connection(DATABASE_PATH)
+    conn.execute('DELETE FROM despesas_recorrentes WHERE id = ?', (id,))
+    conn.commit()
+    conn.close()
+
+def toggle_despesa_pago(id, pago):
+    conn = get_db_connection(DATABASE_PATH)
+    conn.execute('''
+        UPDATE despesas_recorrentes 
+        SET pago = ?
+        WHERE id = ?
+    ''', (pago, id))
+    conn.commit()
+    conn.close()
+
+def get_all_transactions(db_path=None):
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, descricao, valor, categoria, data, responsavel FROM transacoes ORDER BY id DESC")
+    rows = cursor.fetchall()
+    transactions = [
+        {
+            "description": row["descricao"],
+            "amount": row["valor"],
+            "category": row["categoria"],
+            "date": row["data"],
+            "user": row["responsavel"],
+            "id": row["id"]
+        }
+        for row in rows
+    ]
+    conn.close()
+    return transactions
+
+def save_transaction_to_db(descricao, valor, categoria, data, responsavel, db_path=None):
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO transacoes (descricao, valor, categoria, data, responsavel) VALUES (?, ?, ?, ?, ?)",
+        (descricao, valor, categoria, data, responsavel)
+    )
+    conn.commit()
+    trans_id = cursor.lastrowid
+    conn.close()
+    return trans_id

@@ -988,6 +988,19 @@ class TestGamifiedTasks(unittest.TestCase):
         self.assertFalse(success2)
         self.assertIn("Ouro insuficiente", msg2)
 
+        # Test complete reward
+        from modules.ia_memoria.database import complete_reward_in_db
+        success3 = complete_reward_in_db(reward['id'], TEST_DB_PATH)
+        self.assertTrue(success3)
+        
+        # Verify in DB that it is marked with resgatado = 2
+        conn = get_db_connection(TEST_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT resgatado FROM recompensas WHERE id = ?", (reward['id'],))
+        row = cursor.fetchone()
+        self.assertEqual(row['resgatado'], 2)
+        conn.close()
+
     def test_local_nlu_fallbacks(self):
         from modules.ia_memoria.routes import parse_intent_locally
         
@@ -1001,6 +1014,16 @@ class TestGamifiedTasks(unittest.TestCase):
         self.assertEqual(details2['usuario'], "Isa")
         self.assertEqual(details2['tarefa'], "mochila")
         
+        intent_bath, details_bath = parse_intent_locally("concluí o banho")
+        self.assertEqual(intent_bath, "completar_tarefa")
+        self.assertEqual(details_bath['usuario'], "Isa")
+        self.assertEqual(details_bath['tarefa'], "banho")
+
+        intent_hair, details_hair = parse_intent_locally("Isa terminou de lavar o cabelo")
+        self.assertEqual(intent_hair, "completar_tarefa")
+        self.assertEqual(details_hair['usuario'], "Isa")
+        self.assertEqual(details_hair['tarefa'], "banho e lavar cabelo")
+
         intent3, details3 = parse_intent_locally("Mari quer resgatar a recompensa do spa")
         self.assertEqual(intent3, "resgatar_recompensa")
         self.assertEqual(details3['usuario'], "Mari")
@@ -1156,13 +1179,12 @@ class TestRecipesAndChoreDivision(unittest.TestCase):
         cassi_tasks = [t for t in tasks if t['usuario_nome'] == 'Cassi']
         mari_tasks = [t for t in tasks if t['usuario_nome'] == 'Mari']
         
-        # Cassi and Mari tasks sum to 37 (23 shared random split + 14 clutter focus daily for both)
-        self.assertEqual(len(cassi_tasks) + len(mari_tasks), 37)
+        # Cassi and Mari tasks sum to 42 (28 shared random split + 14 clutter focus daily for both)
+        self.assertEqual(len(cassi_tasks) + len(mari_tasks), 42)
         
-        # One gets 18 and the other gets 19
-        self.assertIn(len(cassi_tasks), [18, 19])
-        self.assertIn(len(mari_tasks), [18, 19])
-        self.assertNotEqual(len(cassi_tasks), len(mari_tasks))
+        # Both get 21 tasks (14 shared + 7 clutter focus)
+        self.assertEqual(len(cassi_tasks), 21)
+        self.assertEqual(len(mari_tasks), 21)
 
 
 
@@ -1286,7 +1308,7 @@ class TestTaskManagement(unittest.TestCase):
         self.assertEqual(linked_evt['titulo'], "Tarefa Cassi: Brinquedos teste atualizado")
         self.assertEqual(linked_evt['responsavel'], "Cassi")
         self.assertEqual(linked_evt['categoria'], "Organização")
-        self.assertEqual(linked_evt['data'], "2026-06-15")
+        self.assertEqual(linked_evt['data'], today_str)
         self.assertEqual(linked_evt['hora'], "10:00")
 
     def test_delete_task_api(self):

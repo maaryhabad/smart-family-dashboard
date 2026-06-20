@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +8,13 @@
     <!-- Google Fonts for premium typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <!-- Main Style Sheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
     <div class="app-container">
         <!-- Sidebar Navigation -->
@@ -63,34 +67,43 @@
             <nav class="sidebar-nav">
                 <button class="nav-item active" data-tab="ia-memoria" id="btn-ia-memoria">
                     <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2a10 10 0 0 1 7.54 16.59l-1.42-1.42A8 8 0 1 0 6.18 17.5l-1.42 1.42A10 10 0 0 1 12 2z"/>
-                        <path d="M12 6a6 6 0 0 1 4.52 9.94l-1.42-1.42A4 4 0 1 0 8.9 14.5l-1.42 1.42A6 6 0 0 1 12 6z"/>
-                        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                        <path
+                            d="M12 2a10 10 0 0 1 7.54 16.59l-1.42-1.42A8 8 0 1 0 6.18 17.5l-1.42 1.42A10 10 0 0 1 12 2z" />
+                        <path d="M12 6a6 6 0 0 1 4.52 9.94l-1.42-1.42A4 4 0 1 0 8.9 14.5l-1.42 1.42A6 6 0 0 1 12 6z" />
+                        <circle cx="12" cy="12" r="2" fill="currentColor" />
                     </svg>
                     <span>Memória da Casa</span>
                 </button>
                 <button class="nav-item" data-tab="financas" id="btn-financas">
                     <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="1" x2="12" y2="23"/>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        <line x1="12" y1="1" x2="12" y2="23" />
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
                     <span>Controle Financeiro</span>
                 </button>
                 <button class="nav-item" data-tab="calendario" id="btn-calendario">
                     <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
                     <span>Calendário Dinâmico</span>
                 </button>
                 <button class="nav-item" data-tab="todo-gamer" id="btn-todo-gamer">
                     <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="6" width="20" height="12" rx="2"/>
-                        <path d="M6 12h4m-2-2v4m7-2h.01M19 10h.01"/>
+                        <rect x="2" y="6" width="20" height="12" rx="2" />
+                        <path d="M6 12h4m-2-2v4m7-2h.01M19 10h.01" />
                     </svg>
                     <span>To-Do List Gamer</span>
+                </button>
+                <button class="nav-item" data-tab="despesas-recorrentes" id="btn-despesas">
+                    <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <span>Despesas</span>
                 </button>
             </nav>
 
@@ -121,7 +134,7 @@
 
             <!-- Tab Container -->
             <div class="tab-viewport">
-                
+
                 <!-- TAB 1: IA MEMÓRIA -->
                 <section class="tab-content active" id="tab-ia-memoria">
                     <div class="ia-memoria-layout">
@@ -132,42 +145,52 @@
                                     <span class="ai-avatar">🤖</span>
                                     <div>
                                         <h3>Assistente DashFamília</h3>
-                                        <span class="badge badge-success" id="ai-status-badge">Online & Aprendendo</span>
+                                        <span class="badge badge-success" id="ai-status-badge">Online &
+                                            Aprendendo</span>
                                     </div>
                                 </div>
                             </div>
-    
+
                             <!-- Chat Messages Display -->
                             <div class="chat-messages" id="chat-messages">
                                 <div class="message system-message">
-                                    🤖 Olá, Mariana! Sou a inteligência do lar. Você pode me fazer perguntas sobre onde as coisas estão guardadas, senhas de acesso, contatos importantes da casa e muito mais. O que você gostaria de saber hoje?
+                                    🤖 Olá, Mariana! Sou a inteligência do lar. Você pode me fazer perguntas sobre onde
+                                    as coisas estão guardadas, senhas de acesso, contatos importantes da casa e muito
+                                    mais. O que você gostaria de saber hoje?
                                 </div>
                             </div>
-    
+
                             <!-- Suggested Query Chips -->
                             <div class="chat-chips">
-                                <span class="chip" onclick="sendSuggested('Qual a senha do Wi-Fi de visitas?')">🔑 Senha do Wi-Fi</span>
-                                <span class="chip" onclick="sendSuggested('Onde está a chave reserva do carro?')">🔑 Chave reserva</span>
-                                <span class="chip" onclick="sendSuggested('Qual o número do encanador?')">📞 Encanador</span>
-                                <span class="chip" onclick="sendSuggested('Onde guardamos as decorações de Natal?')">📦 Caixas de Natal</span>
+                                <span class="chip" onclick="sendSuggested('Qual a senha do Wi-Fi de visitas?')">🔑 Senha
+                                    do Wi-Fi</span>
+                                <span class="chip" onclick="sendSuggested('Onde está a chave reserva do carro?')">🔑
+                                    Chave reserva</span>
+                                <span class="chip" onclick="sendSuggested('Qual o número do encanador?')">📞
+                                    Encanador</span>
+                                <span class="chip" onclick="sendSuggested('Onde guardamos as decorações de Natal?')">📦
+                                    Caixas de Natal</span>
                             </div>
-    
+
                             <!-- Chat Input Bar -->
                             <div class="chat-input-bar">
-                                <input type="text" id="chat-input" placeholder="Pergunte ex: 'Onde está a chave reserva?' ou 'Qual o contato do encanador?'..." autocomplete="off">
+                                <input type="text" id="chat-input"
+                                    placeholder="Pergunte ex: 'Onde está a chave reserva?' ou 'Qual o contato do encanador?'..."
+                                    autocomplete="off">
                                 <button id="btn-chat-mic" class="btn btn-secondary btn-mic" title="Falar (Ditado)">
                                     <span>🎙️</span>
                                 </button>
                                 <button id="btn-chat-send" class="btn btn-primary">
                                     <span>Enviar</span>
-                                    <svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="22" y1="2" x2="11" y2="13"/>
-                                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                    <svg class="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="22" y1="2" x2="11" y2="13" />
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
                                     </svg>
                                 </button>
                             </div>
                         </div>
-                        
+
                         <!-- Coluna da Direita: Gerenciador de Memórias -->
                         <div class="memory-vault-container glass-panel">
                             <div class="vault-header">
@@ -176,11 +199,12 @@
                                     <span>+ Nova Memória</span>
                                 </button>
                             </div>
-                            
+
                             <div class="vault-search-row">
-                                <input type="text" id="vault-search" placeholder="Buscar nas memórias..." autocomplete="off">
+                                <input type="text" id="vault-search" placeholder="Buscar nas memórias..."
+                                    autocomplete="off">
                             </div>
-                            
+
                             <div class="vault-filter-chips" id="vault-category-filters">
                                 <span class="filter-chip active" data-category="all">Todos</span>
                                 <span class="filter-chip" data-category="Senhas">🔑 Senhas</span>
@@ -193,7 +217,7 @@
                                 <span class="filter-chip" data-category="Receitas">🍳 Receitas</span>
                                 <span class="filter-chip" data-category="Geral">📝 Geral</span>
                             </div>
-                            
+
                             <div class="memories-list" id="memories-list-vault">
                                 <!-- Cards will be injected via JavaScript -->
                                 <div class="vault-loading">Carregando memórias...</div>
@@ -290,11 +314,13 @@
                                     <button class="btn btn-secondary btn-sm" id="cal-next-btn">Próximo &gt;</button>
                                 </div>
                                 <h3 id="cal-month-title">Junho 2026</h3>
-                                <button class="btn btn-primary btn-sm" id="cal-sync-btn" style="background: #10ac84; border: none; display: flex; align-items: center; gap: 6px; color: white;">
-                                    <span id="sync-icon-symbol">🔄</span> <span id="sync-btn-text">Sincronizar Google</span>
+                                <button class="btn btn-primary btn-sm" id="cal-sync-btn"
+                                    style="background: #10ac84; border: none; display: flex; align-items: center; gap: 6px; color: white;">
+                                    <span id="sync-icon-symbol">🔄</span> <span id="sync-btn-text">Sincronizar
+                                        Google</span>
                                 </button>
                             </div>
-                            
+
                             <!-- Calendar Grid -->
                             <div class="calendar-grid">
                                 <div class="day-name">Dom</div>
@@ -304,7 +330,7 @@
                                 <div class="day-name">Qui</div>
                                 <div class="day-name">Sex</div>
                                 <div class="day-name">Sáb</div>
-                                
+
                                 <div class="calendar-days-container" id="calendar-days">
                                     <!-- Injected via JavaScript -->
                                 </div>
@@ -313,18 +339,23 @@
 
                         <!-- Sidebar Events list -->
                         <div class="glass-panel calendar-sidebar" style="display: flex; flex-direction: column;">
-                            <div class="vault-header" style="padding: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 15px;">
+                            <div class="vault-header"
+                                style="padding: 0 0 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 15px;">
                                 <h3 style="margin: 0;">Eventos Agendados</h3>
-                                <button id="btn-add-event" class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 6px 12px;">+ Novo Evento</button>
+                                <button id="btn-add-event" class="btn btn-primary btn-sm"
+                                    style="font-size: 0.75rem; padding: 6px 12px;">+ Novo Evento</button>
                             </div>
-                            <div class="events-list" id="calendar-events-list" style="max-height: 250px; overflow-y: auto; padding-right: 4px; margin-bottom: 15px;">
+                            <div class="events-list" id="calendar-events-list"
+                                style="max-height: 250px; overflow-y: auto; padding-right: 4px; margin-bottom: 15px;">
                                 <!-- Injected via JavaScript -->
                             </div>
-                            
-                            <div class="vault-header" style="padding: 15px 0 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 15px; border-top: 1px solid rgba(255,255,255,0.08);">
+
+                            <div class="vault-header"
+                                style="padding: 15px 0 15px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 15px; border-top: 1px solid rgba(255,255,255,0.08);">
                                 <h3 style="margin: 0;">Missões de Hoje 📋</h3>
                             </div>
-                            <div class="events-list" id="calendar-tasks-list" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                            <div class="events-list" id="calendar-tasks-list"
+                                style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
                                 <!-- Injected via JavaScript -->
                             </div>
                         </div>
@@ -335,7 +366,8 @@
                 <section class="tab-content" id="tab-todo-gamer">
                     <div class="gamer-layout">
                         <!-- User Selector Tabs -->
-                        <div class="gamer-tabs-row" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center; flex-wrap: wrap;">
+                        <div class="gamer-tabs-row"
+                            style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center; flex-wrap: wrap;">
                             <button class="gamer-tab active" data-member="Mari">
                                 👩‍💻 Mariana
                             </button>
@@ -379,8 +411,10 @@
                                 <div class="section-title-row">
                                     <h3>📜 Quadro de Missões Ativas</h3>
                                     <div style="display: flex; gap: 8px;">
-                                        <button class="btn btn-secondary btn-sm" id="btn-reset-quests">Recarregar Diárias</button>
-                                        <button class="btn btn-primary btn-sm" id="btn-add-quest" style="font-size: 0.75rem; padding: 4px 8px;">+ Nova Missão</button>
+                                        <button class="btn btn-secondary btn-sm" id="btn-reset-quests">Recarregar
+                                            Diárias</button>
+                                        <button class="btn btn-primary btn-sm" id="btn-add-quest"
+                                            style="font-size: 0.75rem; padding: 4px 8px;">+ Nova Missão</button>
                                     </div>
                                 </div>
                                 <div class="quests-list" id="quests-list">
@@ -392,7 +426,13 @@
                             <div class="glass-panel gamer-section flex-1">
                                 <div class="section-title-row">
                                     <h3>🛒 Loja de Recompensas</h3>
-                                    <button class="btn btn-secondary btn-sm" id="btn-add-reward" style="font-size: 0.75rem; padding: 4px 8px;">+ Recompensa</button>
+                                    <button class="btn btn-secondary btn-sm" id="btn-add-reward"
+                                        style="font-size: 0.75rem; padding: 4px 8px;">+ Recompensa</button>
+                                </div>
+                                <div class="rewards-sub-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+                                    <button class="reward-sub-tab-btn active" id="btn-rewards-avail" onclick="setRewardsFilter('avail')" style="background: none; border: none; border-bottom: 2px solid var(--color-primary); color: var(--text-white); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Disponíveis</button>
+                                    <button class="reward-sub-tab-btn" id="btn-rewards-redeemed" onclick="setRewardsFilter('redeemed')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Resgatadas</button>
+                                    <button class="reward-sub-tab-btn" id="btn-rewards-completed" onclick="setRewardsFilter('completed')" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; padding: 4px 12px; font-weight: 600; outline: none; transition: all 0.2s;">Concluídas</button>
                                 </div>
                                 <div class="rewards-list" id="rewards-list">
                                     <!-- Dynamically injected -->
@@ -402,8 +442,172 @@
                     </div>
                 </section>
 
+                <!-- TAB 5: DESPESAS RECORRENTES -->
+                <section class="tab-content" id="tab-despesas-recorrentes">
+                    <!-- Summary Checklist Widget -->
+                    <div class="finance-cards-grid"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 1.5rem; gap: 1rem;">
+                        <div class="card-metric glass-panel border-blue" style="padding: 1rem 1.25rem;">
+                            <span class="card-icon text-blue" style="font-size: 1.4rem; float: right;">⏳</span>
+                            <div class="metric-info">
+                                <span class="label"
+                                    style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Total
+                                    Pendente</span>
+                                <h3 class="value" id="despesas-total-pendente"
+                                    style="font-size: 1.4rem; font-weight: 800; margin-top: 0.25rem; color: var(--text-white);">
+                                    R$ 0,00</h3>
+                            </div>
+                        </div>
+                        <div class="card-metric glass-panel border-green" style="padding: 1rem 1.25rem;">
+                            <span class="card-icon text-green" style="font-size: 1.4rem; float: right;">✅</span>
+                            <div class="metric-info">
+                                <span class="label"
+                                    style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Total
+                                    Pago</span>
+                                <h3 class="value" id="despesas-total-pago"
+                                    style="font-size: 1.4rem; font-weight: 800; margin-top: 0.25rem; color: var(--color-green);">
+                                    R$ 0,00</h3>
+                            </div>
+                        </div>
+                        <div class="card-metric glass-panel border-purple" style="padding: 1rem 1.25rem;">
+                            <div class="metric-info">
+                                <span class="label"
+                                    style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Progresso
+                                    Mensal</span>
+                                <div
+                                    style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.25rem; margin-bottom: 0.4rem;">
+                                    <span id="despesas-progresso-texto"
+                                        style="font-size: 1rem; font-weight: 800; color: var(--text-white);">0 de 0
+                                        (0%)</span>
+                                </div>
+                                <div class="progress-bar-bg"
+                                    style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                    <div class="progress-bar-fill" id="despesas-progresso-bar"
+                                        style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel finance-section">
+                        <div class="section-title-row">
+                            <h3>💰 Despesas e Contas do Mês</h3>
+                            <button class="btn btn-primary btn-sm" id="btn-add-despesa">+ Nova Despesa</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">Pago?</th>
+                                        <th>Descrição</th>
+                                        <th>Categoria</th>
+                                        <th>Valor</th>
+                                        <th>Vencimento</th>
+                                        <th>Tipo</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-despesas-recorrentes">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
+    </div>
+
+    <!-- Gerenciar Despesa Modal -->
+    <div class="modal-overlay" id="despesa-modal">
+        <div class="modal-content glass-panel" style="max-width: 460px; width: 90%;">
+            <div class="modal-header">
+                <h3 style="display: flex; align-items: center; gap: 8px;">💰 <span id="despesa-modal-title">Gerenciar
+                        Despesa</span></h3>
+                <button class="btn-close-modal" id="btn-close-despesa-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="despesa-form" onsubmit="event.preventDefault();">
+                    <input type="hidden" id="edit-despesa-id">
+
+                    <!-- Descrição -->
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="despesa-descricao"
+                            style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Descrição
+                            da Despesa</label>
+                        <input type="text" id="despesa-descricao" placeholder="Ex: Internet Fibra, Conta de Luz..."
+                            required
+                            style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem; transition: var(--transition-smooth);">
+                    </div>
+
+                    <!-- Categoria -->
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="despesa-categoria"
+                            style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Categoria</label>
+                        <select id="despesa-categoria" required
+                            style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem; cursor:pointer;">
+                            <option value="" disabled selected>Selecione a Categoria</option>
+                            <option value="Habitação">🏠 Habitação</option>
+                            <option value="Educação">📖 Educação</option>
+                            <option value="Alimentação">🛒 Alimentação</option>
+                            <option value="Saúde">🩺 Saúde</option>
+                            <option value="Transporte">🚗 Transporte</option>
+                            <option value="Lazer">🎮 Lazer</option>
+                            <option value="Outros">📝 Outros</option>
+                        </select>
+                    </div>
+
+                    <!-- Row 1: Valor e Dia do Vencimento -->
+                    <div class="form-row" style="display: flex; gap: 12px; margin-bottom: 16px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="despesa-valor"
+                                style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Valor
+                                (R$)</label>
+                            <input type="number" id="despesa-valor" placeholder="0.00" required step="0.01" min="0.01"
+                                style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="despesa-dia"
+                                style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Dia
+                                de Vencimento</label>
+                            <input type="number" id="despesa-dia" placeholder="Dia (1-31)" min="1" max="31" required
+                                style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem;">
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Tipo e Qtd Parcelas -->
+                    <div class="form-row" style="display: flex; gap: 12px; margin-bottom: 16px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="despesa-tipo"
+                                style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Tipo
+                                de Conta</label>
+                            <select id="despesa-tipo" required
+                                style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem; cursor:pointer;">
+                                <option value="Recorrente">🔄 Recorrente</option>
+                                <option value="Parcelado">📅 Parcelado</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="despesa-parcelas-group" style="flex: 1; display: none;">
+                            <label for="despesa-parcelas"
+                                style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Qtd.
+                                Parcelas</label>
+                            <input type="number" id="despesa-parcelas" placeholder="Ex: 12" min="1"
+                                style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem;">
+                        </div>
+                    </div>
+
+                    <!-- Footer / Buttons -->
+                    <div class="modal-footer"
+                        style="margin-top: 28px; display:flex; justify-content:flex-end; gap:12px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-despesa-modal"
+                            style="padding: 9px 18px; border-radius:8px; font-size:0.9rem;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"
+                            style="padding: 9px 18px; border-radius:8px; font-size:0.9rem; background:#5f27cd; color:white; border:none; box-shadow: 0 4px 12px var(--color-primary-glow);">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Edit/Add Memory Modal -->
@@ -416,7 +620,7 @@
             <div class="modal-body">
                 <form id="memory-form" onsubmit="event.preventDefault();">
                     <input type="hidden" id="edit-mem-id">
-                    
+
                     <div class="form-group">
                         <label for="edit-mem-category">Categoria</label>
                         <select id="edit-mem-category" required>
@@ -431,22 +635,24 @@
                             <option value="Geral">📝 Geral</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="edit-mem-key">Assunto (Palavra-chave)</label>
-                        <input type="text" id="edit-mem-key" placeholder="Ex: wifi visitas, chave reserva carro..." required>
+                        <input type="text" id="edit-mem-key" placeholder="Ex: wifi visitas, chave reserva carro..."
+                            required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="edit-mem-content">Conteúdo da Memória</label>
                         <div class="textarea-voice-wrapper">
-                            <textarea id="edit-mem-content" rows="4" placeholder="Escreva os detalhes da memória aqui..." required></textarea>
+                            <textarea id="edit-mem-content" rows="4"
+                                placeholder="Escreva os detalhes da memória aqui..." required></textarea>
                             <button type="button" id="btn-modal-mic" class="btn-modal-mic" title="Ditar Conteúdo">
                                 <span>🎙️</span>
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancelar</button>
                         <button type="submit" class="btn btn-primary" id="btn-save-modal">Salvar Alterações</button>
@@ -461,44 +667,67 @@
         <div class="modal-content glass-panel" style="max-width: 500px;">
             <div class="modal-header">
                 <h3 style="margin:0;">👎 Corrigir Entendimento da IA</h3>
-                <button class="btn-close-modal" id="btn-close-feedback-modal" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+                <button class="btn-close-modal" id="btn-close-feedback-modal"
+                    style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="feedback-form" onsubmit="event.preventDefault();">
                     <input type="hidden" id="feedback-msg-text">
-                    
+
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:500;">Frase que você digitou:</label>
-                        <blockquote id="feedback-original-msg" style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-left: 3px solid #818cf8; border-radius: 4px; font-style: italic; margin: 0 0 15px 0; color: rgba(255,255,255,0.85);"></blockquote>
+                        <label style="display:block; margin-bottom:5px; font-weight:500;">Frase que você
+                            digitou:</label>
+                        <blockquote id="feedback-original-msg"
+                            style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-left: 3px solid #818cf8; border-radius: 4px; font-style: italic; margin: 0 0 15px 0; color: rgba(255,255,255,0.85);">
+                        </blockquote>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="feedback-correct-intent" style="display:block; margin-bottom:5px; font-weight:500;">Qual era a intenção correta?</label>
-                        <select id="feedback-correct-intent" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="feedback-correct-intent"
+                            style="display:block; margin-bottom:5px; font-weight:500;">Qual era a intenção
+                            correta?</label>
+                        <select id="feedback-correct-intent" required
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                             <option value="salvar">Anote ou salve esta informação na memória</option>
                             <option value="buscar">Procure ou busque esta informação nas memórias</option>
                             <option value="adicionar_lista">Adicione itens na lista de compras</option>
                             <option value="remover_lista">Remova itens da lista de compras</option>
                             <option value="limpar_lista">Comprei tudo / Limpe a lista de compras</option>
+                            <option value="composto_lista">Comando composto de lista (adicionar e remover)</option>
+                            <option value="agendar_calendario">Agendar compromisso no calendário</option>
                             <option value="remover_calendario">Desmarcar compromisso do calendário</option>
+                            <option value="completar_tarefa">Concluir tarefa do quadro de missões gamer</option>
+                            <option value="resgatar_recompensa">Resgatar/comprar recompensa com ouro gamer</option>
+                            <option value="listar_tarefas">Ver/listar as tarefas pendentes</option>
+                            <option value="salvar_receita">Salvar receita culinária</option>
+                            <option value="deletar_receita">Apagar/deletar receita culinária</option>
+                            <option value="comprar_receita">Comprar ingredientes de uma receita</option>
+                            <option value="adicionar_transacao">Lançar despesa ou receita no controle financeiro</option>
                             <option value="conversa">Conversa geral ou saudação</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group" id="feedback-items-group" style="margin-bottom: 15px;">
-                        <label for="feedback-details-content" id="feedback-details-label" style="display:block; margin-bottom:5px; font-weight:500;">Conteúdo / Itens (Separados por vírgula se forem múltiplos):</label>
-                        <input type="text" id="feedback-details-content" placeholder="Ex: Areia dos gatos, café..." style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="feedback-details-content" id="feedback-details-label"
+                            style="display:block; margin-bottom:5px; font-weight:500;">Conteúdo / Itens (Separados por
+                            vírgula se forem múltiplos):</label>
+                        <input type="text" id="feedback-details-content" placeholder="Ex: Areia dos gatos, café..."
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                     </div>
-                    
-                    <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
-                        <button type="button" class="btn btn-secondary" id="btn-cancel-feedback-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" id="btn-submit-feedback-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Corrigir e Treinar IA</button>
+
+                    <div class="modal-footer"
+                        style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-feedback-modal"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-submit-feedback-modal"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Corrigir
+                            e Treinar IA</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-    
+
     <!-- Edit/Add Event Modal -->
     <div class="modal-overlay" id="event-modal">
         <div class="modal-content glass-panel" style="max-width: 500px;">
@@ -509,27 +738,36 @@
             <div class="modal-body">
                 <form id="event-form" onsubmit="event.preventDefault();">
                     <input type="hidden" id="edit-event-id">
-                    
+
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="edit-event-title" style="display:block; margin-bottom:5px; font-weight:500;">Título do Compromisso</label>
-                        <input type="text" id="edit-event-title" placeholder="Ex: Dentista Mariana, Aula de Ballet..." required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="edit-event-title" style="display:block; margin-bottom:5px; font-weight:500;">Título
+                            do Compromisso</label>
+                        <input type="text" id="edit-event-title" placeholder="Ex: Dentista Mariana, Aula de Ballet..."
+                            required
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                     </div>
 
                     <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-event-date" style="display:block; margin-bottom:5px; font-weight:500;">Data</label>
-                            <input type="date" id="edit-event-date" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-event-date"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Data</label>
+                            <input type="date" id="edit-event-date" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                         </div>
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-event-time" style="display:block; margin-bottom:5px; font-weight:500;">Hora</label>
-                            <input type="time" id="edit-event-time" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-event-time"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Hora</label>
+                            <input type="time" id="edit-event-time" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                         </div>
                     </div>
 
                     <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-event-user" style="display:block; margin-bottom:5px; font-weight:500;">Responsável</label>
-                            <select id="edit-event-user" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-event-user"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Responsável</label>
+                            <select id="edit-event-user" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                                 <option value="Família">Família</option>
                                 <option value="Mariana">Mariana</option>
                                 <option value="Rodrigo">Rodrigo</option>
@@ -538,8 +776,10 @@
                             </select>
                         </div>
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-event-category" style="display:block; margin-bottom:5px; font-weight:500;">Categoria</label>
-                            <select id="edit-event-category" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-event-category"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Categoria</label>
+                            <select id="edit-event-category" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                                 <option value="Familiar">Familiar</option>
                                 <option value="Saúde">Saúde</option>
                                 <option value="Compromisso">Compromisso</option>
@@ -550,13 +790,17 @@
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="edit-event-location" style="display:block; margin-bottom:5px; font-weight:500;">Localização (Opcional)</label>
-                        <input type="text" id="edit-event-location" placeholder="Ex: R. Comendador Araújo, 338" style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="edit-event-location"
+                            style="display:block; margin-bottom:5px; font-weight:500;">Localização (Opcional)</label>
+                        <input type="text" id="edit-event-location" placeholder="Ex: R. Comendador Araújo, 338"
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="edit-event-recurrence" style="display:block; margin-bottom:5px; font-weight:500;">Recorrência (Opcional)</label>
-                        <select id="edit-event-recurrence" style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="edit-event-recurrence"
+                            style="display:block; margin-bottom:5px; font-weight:500;">Recorrência (Opcional)</label>
+                        <select id="edit-event-recurrence"
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                             <option value="">Sem repetição</option>
                             <option value="RRULE:FREQ=WEEKLY;BYDAY=MO">Toda segunda-feira</option>
                             <option value="RRULE:FREQ=WEEKLY;BYDAY=TU">Toda terça-feira</option>
@@ -569,13 +813,19 @@
                     </div>
 
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="edit-event-color" style="display:block; margin-bottom:5px; font-weight:500;">Cor da Etiqueta</label>
-                        <input type="color" id="edit-event-color" value="#5f27cd" style="width:100%; padding:0; height:38px; cursor:pointer; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); border-radius:4px;">
+                        <label for="edit-event-color" style="display:block; margin-bottom:5px; font-weight:500;">Cor da
+                            Etiqueta</label>
+                        <input type="color" id="edit-event-color" value="#5f27cd"
+                            style="width:100%; padding:0; height:38px; cursor:pointer; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.25); border-radius:4px;">
                     </div>
 
-                    <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
-                        <button type="button" class="btn btn-secondary" id="btn-cancel-event-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" id="btn-save-event-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Salvar Compromisso</button>
+                    <div class="modal-footer"
+                        style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-event-modal"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-save-event-modal"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Salvar
+                            Compromisso</button>
                     </div>
                 </form>
             </div>
@@ -587,27 +837,39 @@
         <div class="modal-content glass-panel" style="max-width: 400px;">
             <div class="modal-header">
                 <h3 id="reward-modal-title">🎁 Nova Recompensa</h3>
-                <button class="btn-close-modal" id="btn-close-reward-modal" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+                <button class="btn-close-modal" id="btn-close-reward-modal"
+                    style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="reward-form" onsubmit="event.preventDefault();">
                     <input type="hidden" id="edit-reward-id">
-                    
+
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="new-reward-title" style="display:block; margin-bottom:5px; font-weight:500;">Título da Recompensa</label>
-                        <input type="text" id="new-reward-title" placeholder="Ex: 30 min de videogame, Sorvete..." required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="new-reward-title" style="display:block; margin-bottom:5px; font-weight:500;">Título
+                            da Recompensa</label>
+                        <input type="text" id="new-reward-title" placeholder="Ex: 30 min de videogame, Sorvete..."
+                            required
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="new-reward-cost" style="display:block; margin-bottom:5px; font-weight:500;">Custo (Ouro)</label>
-                        <input type="number" id="new-reward-cost" placeholder="Ex: 20" required min="1" style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="new-reward-cost" style="display:block; margin-bottom:5px; font-weight:500;">Custo
+                            (Ouro)</label>
+                        <input type="number" id="new-reward-cost" placeholder="Ex: 20" required min="1"
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="new-reward-icon" style="display:block; margin-bottom:5px; font-weight:500;">Ícone (Emoji)</label>
-                        <input type="text" id="new-reward-icon" placeholder="Ex: 🎮, 🍦, 🧸" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="new-reward-icon" style="display:block; margin-bottom:5px; font-weight:500;">Ícone
+                            (Emoji)</label>
+                        <input type="text" id="new-reward-icon" placeholder="Ex: 🎮, 🍦, 🧸" required
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                     </div>
-                    <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
-                        <button type="button" class="btn btn-secondary" id="btn-cancel-reward-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
-                        <button type="submit" id="btn-save-reward" class="btn btn-primary" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Criar Recompensa</button>
+                    <div class="modal-footer"
+                        style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-reward-modal"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
+                        <button type="submit" id="btn-save-reward" class="btn btn-primary"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Criar
+                            Recompensa</button>
                     </div>
                 </form>
             </div>
@@ -624,24 +886,31 @@
             <div class="modal-body">
                 <form id="quest-form" onsubmit="event.preventDefault();">
                     <input type="hidden" id="edit-quest-id">
-                    
+
                     <div class="form-group" style="margin-bottom: 15px;">
-                        <label for="edit-quest-title" style="display:block; margin-bottom:5px; font-weight:500;">Nome da Missão</label>
-                        <input type="text" id="edit-quest-title" placeholder="Ex: Lavar louça do jantar, Aspirar sala..." required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        <label for="edit-quest-title" style="display:block; margin-bottom:5px; font-weight:500;">Nome da
+                            Missão</label>
+                        <input type="text" id="edit-quest-title"
+                            placeholder="Ex: Lavar louça do jantar, Aspirar sala..." required
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                     </div>
 
                     <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-quest-user" style="display:block; margin-bottom:5px; font-weight:500;">Responsável</label>
-                            <select id="edit-quest-user" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-quest-user"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Responsável</label>
+                            <select id="edit-quest-user" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                                 <option value="Mari">Mariana</option>
                                 <option value="Cassi">Cassi</option>
                                 <option value="Isa">Isa</option>
                             </select>
                         </div>
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-quest-category" style="display:block; margin-bottom:5px; font-weight:500;">Categoria</label>
-                            <select id="edit-quest-category" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-quest-category"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Categoria</label>
+                            <select id="edit-quest-category" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                                 <option value="Limpeza">Limpeza</option>
                                 <option value="Organização">Organização</option>
                                 <option value="Pets">Pets</option>
@@ -653,8 +922,10 @@
 
                     <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-quest-difficulty" style="display:block; margin-bottom:5px; font-weight:500;">Dificuldade</label>
-                            <select id="edit-quest-difficulty" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-quest-difficulty"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Dificuldade</label>
+                            <select id="edit-quest-difficulty" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                                 <option value="Fácil">Fácil</option>
                                 <option value="Médio">Médio</option>
                                 <option value="Difícil">Difícil</option>
@@ -662,32 +933,44 @@
                             </select>
                         </div>
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-quest-date" style="display:block; margin-bottom:5px; font-weight:500;">Data</label>
-                            <input type="date" id="edit-quest-date" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-quest-date"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Data</label>
+                            <input type="date" id="edit-quest-date" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                         </div>
                     </div>
 
                     <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-quest-time" style="display:block; margin-bottom:5px; font-weight:500;">Hora</label>
-                            <input type="time" id="edit-quest-time" required style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-quest-time"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Hora</label>
+                            <input type="time" id="edit-quest-time" required
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                         </div>
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-quest-xp" style="display:block; margin-bottom:5px; font-weight:500;">Recompensa XP</label>
-                            <input type="number" id="edit-quest-xp" required min="1" style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-quest-xp"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Recompensa XP</label>
+                            <input type="number" id="edit-quest-xp" required min="1"
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                         </div>
                     </div>
 
                     <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
                         <div class="form-group" style="flex: 1;">
-                            <label for="edit-quest-gold" style="display:block; margin-bottom:5px; font-weight:500;">Recompensa Gold</label>
-                            <input type="number" id="edit-quest-gold" required min="1" style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <label for="edit-quest-gold"
+                                style="display:block; margin-bottom:5px; font-weight:500;">Recompensa Gold</label>
+                            <input type="number" id="edit-quest-gold" required min="1"
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
                         </div>
                     </div>
 
-                    <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
-                        <button type="button" class="btn btn-secondary" id="btn-cancel-quest-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" id="btn-save-quest-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Salvar Missão</button>
+                    <div class="modal-footer"
+                        style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-quest-modal"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-save-quest-modal"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Salvar
+                            Missão</button>
                     </div>
                 </form>
             </div>
@@ -696,8 +979,9 @@
 
     <!-- Notification system -->
     <div class="toast-container" id="toast-container"></div>
-    
+
     <!-- Main JavaScript File -->
     <script src="{{ url_for('static', filename='js/app.js') }}?v=1.2"></script>
 </body>
+
 </html>

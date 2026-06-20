@@ -282,6 +282,12 @@ def parse_intent_locally(message):
             task_kw = 'aspirador'
         elif 'pano' in msg:
             task_kw = 'passar pano'
+        elif 'cabelo' in msg:
+            task_kw = 'banho e lavar cabelo'
+            user = 'Isa'
+        elif 'banho' in msg:
+            task_kw = 'banho'
+            user = 'Isa'
         elif 'roupa' in msg or 'lavar' in msg:
             if 'cama' in msg or 'banho' in msg:
                 task_kw = 'lavar roupa'
@@ -365,6 +371,46 @@ def parse_intent_locally(message):
         elif 'mari' in msg:
             user = 'Mari'
         return 'listar_tarefas', {'usuario': user}
+
+    # 4. Adicionar transação
+    transaction_keywords = ['despesa', 'receita', 'ganho', 'gasto', 'gastei', 'recebi', 'paguei', 'lançar transação', 'lançar despesa', 'lançar receita', 'adicionar transação', 'salário', 'salario', 'bônus', 'bonus']
+    is_transaction = any(kw in msg for kw in transaction_keywords)
+    if is_transaction:
+        import re
+        numbers = re.findall(r'\b\d+(?:[\.,]\d+)?\b', msg)
+        if numbers:
+            val = float(numbers[0].replace(',', '.'))
+            is_expense = any(kw in msg for kw in ['despesa', 'gasto', 'gastei', 'paguei', 'compra', 'carrefour', 'netflix', 'enel', 'faculdade', 'gasolina', 'padaria', 'farmacia', 'farmácia', 'uber', 'petshop'])
+            valor_final = -val if is_expense else val
+            
+            desc = "Receita"
+            if is_expense:
+                m_desc = re.search(r'\b(?:no|na|em|de|do|da|para|com)\s+([a-zA-Z0-9\s]+)', msg)
+                if m_desc:
+                    desc = m_desc.group(1).strip().capitalize()
+                else:
+                    for known_desc in ['carrefour', 'netflix', 'enel', 'faculdade', 'gasolina', 'padaria', 'farmacia', 'farmácia', 'uber', 'petshop']:
+                        if known_desc in msg:
+                            desc = known_desc.capitalize()
+                            break
+                    if desc == "Receita":
+                        desc = "Despesa"
+            else:
+                m_desc = re.search(r'\b(?:de|do|da|com|proveniente\s+de)\s+([a-zA-Z0-9\s]+)', msg)
+                if m_desc:
+                    desc = m_desc.group(1).strip().capitalize()
+                else:
+                    for known_desc in ['salário', 'salario', 'bônus', 'bonus']:
+                        if known_desc in msg:
+                            desc = "Salário" if "sal" in known_desc else "Bônus"
+                            break
+            
+            desc = re.sub(r'\b\d+.*$', '', desc).strip()
+            desc = re.sub(r'\b(?:reais|real)\b', '', desc, flags=re.IGNORECASE).strip()
+            if not desc:
+                desc = "Despesa" if is_expense else "Receita"
+                
+            return 'adicionar_transacao', {'descricao': desc, 'valor': valor_final}
         
     return None, None
 
@@ -608,12 +654,22 @@ def ia_chat():
                     
                 matched_task = None
                 if task_search:
-                    search_term = task_search.lower()
-                    # Substring match
-                    for t in active_tasks:
-                        if search_term in t['titulo'].lower():
-                            matched_task = t
-                            break
+                    search_term = task_search.lower().strip()
+                    # Special prioritization for Isa's bath task completion:
+                    # If she wants to complete "banho" but also has "banho e lavar cabelo" / "banho e lavar o cabelo" pending,
+                    # match "banho e lavar cabelo" first.
+                    if user_param and user_param.lower() == 'isa' and search_term == 'banho':
+                        for t in active_tasks:
+                            if t['titulo'].lower().strip() in ['banho e lavar cabelo', 'banho e lavar o cabelo']:
+                                matched_task = t
+                                break
+                                
+                    if not matched_task:
+                        # Substring match
+                        for t in active_tasks:
+                            if search_term in t['titulo'].lower():
+                                matched_task = t
+                                break
                     # Token overlap match
                     if not matched_task:
                         search_tokens = set(search_term.split())
@@ -705,10 +761,85 @@ def ia_chat():
                 if not pending_tasks:
                     reply_text = "🎉 **Todas as tarefas estão em dia!** Não há missões pendentes no momento."
                 else:
+                    # Filter duplicates keeping oldest (which has the highest rollover bonus)
+                    pending_tasks.sort(key=lambda x: x['data'])
+                    unique_pending = []
+                    seen_pending = set()
+                    for t in pending_tasks:
+                        key = (t['usuario_nome'].lower(), t['titulo'].lower())
+                        if key not in seen_pending:
+                            seen_pending.add(key)
+                            unique_pending.append(t)
+
+                    # Special rule for Isa: if she has both "Banho" and "Banho e lavar cabelo" / "Banho e lavar o cabelo", keep only the latter.
+                    has_isa_hair_wash = any(
+                        t['usuario_nome'].lower() == 'isa' and t['titulo'].lower().strip() in ['banho e lavar cabelo', 'banho e lavar o cabelo']
+                        for t in unique_pending
+                    )
+                    if has_isa_hair_wash:
+                        unique_pending = [
+                            t for t in unique_pending
+                            if not (t['usuario_nome'].lower() == 'isa' and t['titulo'].lower().strip() == 'banho')
+                        ]
+                            
                     user_desc = f" de {user_param}" if user_param else ""
                     reply_text = f"📜 **Quadro de Missões Pendentes{user_desc}:**<br><br>"
-                    for t in pending_tasks:
+                    for t in unique_pending:
                         reply_text += f"• **{t['usuario_nome']}**: {t['titulo']} ({t['hora']}) - *🔵 {t['reward_xp']} XP | 🪙 {t['reward_gold']} Gold*<br>"
+                is_ollama_parsed = True
+            elif intent == "adicionar_transacao":
+                desc = detalhes.get("descricao")
+                val = detalhes.get("valor")
+                
+                is_expense = val < 0
+                categoria = "Receita"
+                
+                CATEGORIES_KEYWORDS = {
+                    "Habitação (Aluguel/Contas)": ['enel', 'luz', 'água', 'agua', 'aluguel', 'condomínio', 'condominio', 'energia', 'internet', 'fibra', 'gás', 'gas', 'habitação', 'habitacao'],
+                    "Educação": ['escola', 'faculdade', 'curso', 'livro', 'caderno', 'educação', 'educacao'],
+                    "Alimentação e Supermercado": ['carrefour', 'mercado', 'supermercado', 'padaria', 'feira', 'comida', 'pão', 'almoço', 'jantar', 'pizza', 'restaurante', 'alimentação', 'alimentacao'],
+                    "Saúde e Planos": ['farmácia', 'farmacia', 'médico', 'medico', 'dentista', 'consulta', 'remédio', 'remedio', 'plano', 'saúde', 'saude'],
+                    "Transporte/Combustível": ['gasolina', 'combustível', 'uber', 'estacionamento', 'pedágio', 'ônibus', 'metro', 'transporte'],
+                    "Lazer e Streaming": ['netflix', 'spotify', 'cinema', 'streaming', 'jogo', 'videogame', 'cerveja', 'churrasco', 'lazer']
+                }
+                
+                if is_expense:
+                    categoria = "Outros"
+                    desc_lower = desc.lower()
+                    msg_lower = message.lower()
+                    for cat_name, keywords in CATEGORIES_KEYWORDS.items():
+                        if any(kw in desc_lower or kw in msg_lower for kw in keywords):
+                            categoria = cat_name
+                            break
+                            
+                user = "Família"
+                msg_lower = message.lower()
+                if 'mari' in msg_lower:
+                    user = "Mariana"
+                elif 'cassi' in msg_lower:
+                    user = "Cassi"
+                elif 'isa' in msg_lower:
+                    user = "Isa"
+                    
+                import datetime
+                date_str = datetime.date.today().strftime('%d/%m/%Y')
+                
+                from modules.ia_memoria.database import save_transaction_to_db
+                save_transaction_to_db(desc, val, categoria, date_str, user)
+                
+                if val < 0:
+                    val_formatted = f"- R$ {abs(val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                else:
+                    val_formatted = f"R$ {val:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    
+                reply_text = (
+                    f"💰 **Transação registrada com sucesso!**<br><br>"
+                    f"📝 **Descrição:** {desc}<br>"
+                    f"💵 **Valor:** {val_formatted}<br>"
+                    f"🏷️ **Categoria:** {categoria}<br>"
+                    f"👤 **Responsável:** {user}<br><br>"
+                    f"📊 *A aba Controle Financeiro foi atualizada!*"
+                )
                 is_ollama_parsed = True
             elif intent == "salvar_receita":
                 nome = detalhes.get("nome")
@@ -1357,6 +1488,368 @@ def feedback_retrain():
                             delete_event_from_google_background(g_id)
                         except Exception as ex:
                             print(f"Google Calendar background delete trigger failed: {ex}")
+
+        elif correct_intent == "composto_lista":
+            import re
+            raw_add = []
+            raw_remove = []
+            details_lower = details.lower()
+            if "adicionar" in details_lower or "remover" in details_lower:
+                parts = re.split(r'\b(adicionar|remover)\b', details, flags=re.IGNORECASE)
+                current_action = None
+                for part in parts:
+                    part_strip = part.strip().strip(':').strip()
+                    if part_strip.lower() == 'adicionar':
+                        current_action = 'add'
+                    elif part_strip.lower() == 'remover':
+                        current_action = 'remove'
+                    elif part_strip:
+                        sub_items = [clean_item_name(i) for i in re.split(r',|;| e ', part_strip) if clean_item_name(i)]
+                        if current_action == 'add':
+                            raw_add.extend(sub_items)
+                        elif current_action == 'remove':
+                            raw_remove.extend(sub_items)
+            else:
+                raw_add = [clean_item_name(i) for i in re.split(r',|;| e ', details) if clean_item_name(i)]
+
+            if raw_add or raw_remove:
+                memories = get_all_memories()
+                market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+                
+                # Apply removals
+                if market_lists:
+                    target_list = market_lists[0]
+                    old_content = target_list['conteudo']
+                    if ':' in old_content:
+                        list_part = old_content.split(':', 1)[1].strip()
+                    else:
+                        list_part = old_content
+                    list_part_clean = list_part.replace(' e ', ', ')
+                    if list_part_clean.endswith('.'):
+                        list_part_clean = list_part_clean[:-1]
+                    list_part_clean = list_part_clean.strip()
+                    old_items = [item.strip() for item in list_part_clean.split(',')]
+                    old_items = [item for item in old_items if item]
+                    
+                    if raw_remove:
+                        remove_set_lower = {item.lower().strip() for item in raw_remove}
+                        remaining_items = [item for item in old_items if item.lower().strip() not in remove_set_lower]
+                    else:
+                        remaining_items = old_items
+                else:
+                    remaining_items = []
+                
+                # Apply additions
+                if raw_add:
+                    merged_items = []
+                    seen_lower = set()
+                    for item in remaining_items + raw_add:
+                        item_lower = item.lower().strip()
+                        if item_lower not in seen_lower and item_lower != "":
+                            seen_lower.add(item_lower)
+                            merged_items.append(item.strip().capitalize())
+                else:
+                    merged_items = [item.capitalize() for item in remaining_items]
+                    
+                if merged_items:
+                    if len(merged_items) > 1:
+                        formatted_keep = ", ".join(merged_items[:-1]) + " e " + merged_items[-1]
+                    else:
+                        formatted_keep = merged_items[0]
+                    new_content = f"A lista de compras do mercado é: {formatted_keep}."
+                    
+                    if market_lists:
+                        save_memory("Mercado", market_lists[0]['chave'], new_content)
+                    else:
+                        save_memory("Mercado", "lista compras mercado", new_content)
+                else:
+                    if market_lists:
+                        delete_memory(market_lists[0]['id'])
+
+        elif correct_intent == "agendar_calendario":
+            import re
+            import datetime
+            event_date = None
+            event_time = "00:00"
+            event_title = details
+            
+            m_iso = re.search(r'\b(\d{4})-(\d{2})-(\d{2})\b', details)
+            m_br = re.search(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', details)
+            if m_iso:
+                event_date = m_iso.group(0)
+                event_title = event_title.replace(m_iso.group(0), "")
+            elif m_br:
+                day = m_br.group(1)
+                month = m_br.group(2)
+                year = m_br.group(3) if m_br.group(3) else str(datetime.date.today().year)
+                event_date = f"{year}-{month}-{day}"
+                event_title = event_title.replace(m_br.group(0), "")
+            else:
+                event_date = datetime.date.today().strftime("%Y-%m-%d")
+                
+            m_time = re.search(r'\b(\d{2}):(\d{2})\b', details)
+            if m_time:
+                event_time = m_time.group(0)
+                event_title = event_title.replace(m_time.group(0), "")
+                
+            event_title = re.sub(r'\b(às|as|em|dia|no|na)\b', '', event_title, flags=re.IGNORECASE)
+            event_title = re.sub(r'\s+', ' ', event_title).strip()
+            if not event_title:
+                event_title = "Compromisso sem título"
+                
+            event_id = save_event(
+                titulo=event_title,
+                data=event_date,
+                hora=event_time,
+                responsavel='Família',
+                cor='#5f27cd',
+                categoria='Familiar',
+                localizacao=None,
+                recorrencia=None
+            )
+            try:
+                from .google_calendar import push_event_to_google_background
+                push_event_to_google_background(event_id, event_title, event_date, event_time, None, None)
+            except Exception as ex:
+                print(f"Google Calendar background sync trigger failed: {ex}")
+
+        elif correct_intent == "completar_tarefa":
+            import re
+            user_param = None
+            task_search = details
+            for u in ['Cassi', 'Isa', 'Mari']:
+                if re.search(r'\b' + re.escape(u) + r'\b', details, re.IGNORECASE):
+                    user_param = u
+                    task_search = re.sub(r'\b(por|de|do|da|para|user|usuario)?\s*' + re.escape(u) + r'\b', '', task_search, flags=re.IGNORECASE)
+                    break
+            task_search = re.sub(r'\s+', ' ', task_search).strip()
+            
+            all_tasks = get_all_tasks()
+            active_tasks = [t for t in all_tasks if not t['completed']]
+            if user_param:
+                active_tasks = [t for t in active_tasks if t['usuario_nome'].lower() == user_param.lower()]
+                
+            matched_task = None
+            if task_search:
+                search_term = task_search.lower().strip()
+                # Special prioritization for Isa's bath task completion:
+                # If she wants to complete "banho" but also has "banho e lavar cabelo" / "banho e lavar o cabelo" pending,
+                # match "banho e lavar cabelo" first.
+                if user_param and user_param.lower() == 'isa' and search_term == 'banho':
+                    for t in active_tasks:
+                        if t['titulo'].lower().strip() in ['banho e lavar cabelo', 'banho e lavar o cabelo']:
+                            matched_task = t
+                            break
+                            
+                if not matched_task:
+                    for t in active_tasks:
+                        if search_term in t['titulo'].lower():
+                            matched_task = t
+                            break
+            if matched_task:
+                complete_task_in_db(matched_task['id'])
+
+        elif correct_intent == "resgatar_recompensa":
+            import re
+            user_param = None
+            reward_search = details
+            for u in ['Cassi', 'Isa', 'Mari']:
+                if re.search(r'\b' + re.escape(u) + r'\b', details, re.IGNORECASE):
+                    user_param = u
+                    reward_search = re.sub(r'\b(por|de|do|da|para|user|usuario)?\s*' + re.escape(u) + r'\b', '', reward_search, flags=re.IGNORECASE)
+                    break
+            reward_search = re.sub(r'\s+', ' ', reward_search).strip()
+            
+            all_rewards = get_all_rewards()
+            active_rewards = [r for r in all_rewards if not r['resgatado']]
+            if user_param:
+                active_rewards = [r for r in active_rewards if r['usuario_nome'].lower() == user_param.lower()]
+                
+            matched_reward = None
+            if reward_search:
+                search_term = reward_search.lower()
+                for r in active_rewards:
+                    if search_term in r['titulo'].lower():
+                        matched_reward = r
+                        break
+            if matched_reward:
+                redeem_reward_in_db(matched_reward['id'])
+
+        elif correct_intent == "salvar_receita":
+            lines = [l.strip() for l in details.split('\n') if l.strip()]
+            if lines:
+                nome = lines[0]
+                ingredientes = []
+                passo_a_passo = []
+                in_passo = False
+                for line in lines[1:]:
+                    if "passo" in line.lower() or "preparo" in line.lower() or "modo" in line.lower():
+                        in_passo = True
+                        continue
+                    if in_passo:
+                        passo_a_passo.append(line)
+                    else:
+                        ingredientes.append(line)
+                if not ingredientes:
+                    ingredientes = ["Ingredientes não especificados"]
+                ingredientes_str = "\n".join(ingredientes)
+                passo_str = "\n".join(passo_a_passo) if passo_a_passo else "Modo de preparo não especificado"
+                formatted_content = format_recipe_content(ingredientes_str, passo_str)
+                save_memory("Receitas", nome, formatted_content)
+
+        elif correct_intent == "deletar_receita":
+            recipe_name = details.strip()
+            if recipe_name:
+                memories = get_all_memories()
+                recipe_mem = None
+                for m in memories:
+                    if m['categoria'] == 'Receitas' and m['chave'].lower().strip() == recipe_name.lower().strip():
+                        recipe_mem = m
+                        break
+                if recipe_mem:
+                    delete_memory(recipe_mem['id'])
+
+        elif correct_intent == "comprar_receita":
+            recipe_name = details.strip()
+            if recipe_name:
+                memories = get_all_memories()
+                recipe_mem = None
+                recipes = [m for m in memories if m['categoria'] == 'Receitas']
+                if recipes:
+                    best_match, score = search_best_memory(recipe_name, recipes)
+                    if best_match and score >= 0.15:
+                        recipe_mem = best_match
+                        
+                if recipe_mem:
+                    content = recipe_mem['conteudo']
+                    ingredients_list = []
+                    lines = content.split('\n')
+                    in_ingredients = False
+                    for line in lines:
+                        line_strip = line.strip()
+                        if line_strip.lower().startswith('ingredientes:'):
+                            in_ingredients = True
+                            continue
+                        if line_strip.lower().startswith('passo a passo:'):
+                            in_ingredients = False
+                            continue
+                        if in_ingredients:
+                            if line_strip.startswith('-') or line_strip.startswith('*') or line_strip.startswith('•'):
+                                cleaned = line_strip[1:].strip()
+                                if cleaned:
+                                    ingredients_list.append(cleaned)
+                            elif line_strip:
+                                ingredients_list.append(line_strip)
+                                
+                    if not ingredients_list:
+                        idx_inst = content.lower().find('passo a passo')
+                        if idx_inst != -1:
+                            ing_part = content[:idx_inst].strip()
+                        else:
+                            ing_part = content.strip()
+                        if ing_part.lower().startswith('ingredientes:'):
+                            ing_part = ing_part[len('ingredientes:'):].strip()
+                        if '\n' in ing_part:
+                            ingredients_list = [i.strip() for i in ing_part.split('\n') if i.strip()]
+                        else:
+                            ingredients_list = [i.strip() for i in ing_part.split(',') if i.strip()]
+                            
+                    cleaned_list = []
+                    for ing in ingredients_list:
+                        item = ing.strip()
+                        while item and item[0] in ['-', '*', '•', ' ']:
+                            item = item[1:].strip()
+                        if item:
+                            cleaned_list.append(item)
+                    ingredients_list = cleaned_list
+                    
+                    if ingredients_list:
+                        market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+                        if market_lists:
+                            target_list = market_lists[0]
+                            old_content = target_list['conteudo']
+                            if ':' in old_content:
+                                list_part = old_content.split(':', 1)[1].strip()
+                            else:
+                                list_part = old_content
+                            list_part_clean = list_part.replace(' e ', ', ')
+                            if list_part_clean.endswith('.'):
+                                list_part_clean = list_part_clean[:-1]
+                            list_part_clean = list_part_clean.strip()
+                            old_items = [item.strip() for item in list_part_clean.split(',')]
+                            old_items = [item for item in old_items if item]
+                        else:
+                            target_list = None
+                            old_items = []
+                            
+                        merged_items = []
+                        seen_lower = set()
+                        for item in old_items:
+                            item_lower = item.lower().strip()
+                            if item_lower not in seen_lower and item_lower != "":
+                                seen_lower.add(item_lower)
+                                merged_items.append(item.strip().capitalize())
+                                
+                        for ing in ingredients_list:
+                            if ing:
+                                ing_clean_cap = ing[0].upper() + ing[1:]
+                                ing_lower = ing.lower().strip()
+                                if ing_lower not in seen_lower:
+                                    seen_lower.add(ing_lower)
+                                    merged_items.append(ing_clean_cap)
+                                    
+                        if merged_items:
+                            if len(merged_items) > 1:
+                                formatted_keep = ", ".join(merged_items[:-1]) + " e " + merged_items[-1]
+                            else:
+                                formatted_keep = merged_items[0]
+                            new_content = f"A lista de compras do mercado é: {formatted_keep}."
+                            if target_list:
+                                save_memory("Mercado", target_list['chave'], new_content)
+                            else:
+                                save_memory("Mercado", "lista compras mercado", new_content)
+                                
+        elif correct_intent == "adicionar_transacao":
+            intent_local, details_local = parse_intent_locally(details)
+            if intent_local == 'adicionar_transacao':
+                desc = details_local.get('descricao', 'Transação')
+                val = details_local.get('valor', 0.0)
+                
+                is_expense = val < 0
+                categoria = "Receita"
+                
+                CATEGORIES_KEYWORDS = {
+                    "Habitação (Aluguel/Contas)": ['enel', 'luz', 'água', 'agua', 'aluguel', 'condomínio', 'condominio', 'energia', 'internet', 'fibra', 'gás', 'gas', 'habitação', 'habitacao'],
+                    "Educação": ['escola', 'faculdade', 'curso', 'livro', 'caderno', 'educação', 'educacao'],
+                    "Alimentação e Supermercado": ['carrefour', 'mercado', 'supermercado', 'padaria', 'feira', 'comida', 'pão', 'almoço', 'jantar', 'pizza', 'restaurante', 'alimentação', 'alimentacao'],
+                    "Saúde e Planos": ['farmácia', 'farmacia', 'médico', 'medico', 'dentista', 'consulta', 'remédio', 'remedio', 'plano', 'saúde', 'saude'],
+                    "Transporte/Combustível": ['gasolina', 'combustível', 'uber', 'estacionamento', 'pedágio', 'ônibus', 'metro', 'transporte'],
+                    "Lazer e Streaming": ['netflix', 'spotify', 'cinema', 'streaming', 'jogo', 'videogame', 'cerveja', 'churrasco', 'lazer']
+                }
+                
+                if is_expense:
+                    categoria = "Outros"
+                    desc_lower = desc.lower()
+                    details_lower = details.lower()
+                    for cat_name, keywords in CATEGORIES_KEYWORDS.items():
+                        if any(kw in desc_lower or kw in details_lower for kw in keywords):
+                            categoria = cat_name
+                            break
+                            
+                user = "Família"
+                details_lower = details.lower()
+                if 'mari' in details_lower:
+                    user = "Mariana"
+                elif 'cassi' in details_lower:
+                    user = "Cassi"
+                elif 'isa' in details_lower:
+                    user = "Isa"
+                    
+                import datetime
+                date_str = datetime.date.today().strftime('%d/%m/%Y')
+                
+                from modules.ia_memoria.database import save_transaction_to_db
+                save_transaction_to_db(desc, val, categoria, date_str, user)
                 
     except Exception as e:
         print(f"Error updating database during feedback execution: {e}")
@@ -1425,6 +1918,160 @@ def feedback_retrain():
             if event_date:
                 detalhes_payload["data"] = event_date
             assistant_payload["detalhes"] = detalhes_payload
+
+        elif correct_intent == "composto_lista":
+            import re
+            raw_add = []
+            raw_remove = []
+            details_lower = details.lower()
+            if "adicionar" in details_lower or "remover" in details_lower:
+                parts = re.split(r'\b(adicionar|remover)\b', details, flags=re.IGNORECASE)
+                current_action = None
+                for part in parts:
+                    part_strip = part.strip().strip(':').strip()
+                    if part_strip.lower() == 'adicionar':
+                        current_action = 'add'
+                    elif part_strip.lower() == 'remover':
+                        current_action = 'remove'
+                    elif part_strip:
+                        sub_items = [clean_item_name(i) for i in re.split(r',|;| e ', part_strip) if clean_item_name(i)]
+                        if current_action == 'add':
+                            raw_add.extend(sub_items)
+                        elif current_action == 'remove':
+                            raw_remove.extend(sub_items)
+            else:
+                raw_add = [clean_item_name(i) for i in re.split(r',|;| e ', details) if clean_item_name(i)]
+            assistant_payload["detalhes"] = {
+                "adicionar_itens": raw_add,
+                "remover_itens": raw_remove
+            }
+
+        elif correct_intent == "agendar_calendario":
+            import re
+            import datetime
+            event_date = None
+            event_time = "00:00"
+            event_title = details
+            
+            m_iso = re.search(r'\b(\d{4})-(\d{2})-(\d{2})\b', details)
+            m_br = re.search(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', details)
+            if m_iso:
+                event_date = m_iso.group(0)
+                event_title = event_title.replace(m_iso.group(0), "")
+            elif m_br:
+                day = m_br.group(1)
+                month = m_br.group(2)
+                year = m_br.group(3) if m_br.group(3) else str(datetime.date.today().year)
+                event_date = f"{year}-{month}-{day}"
+                event_title = event_title.replace(m_br.group(0), "")
+            else:
+                event_date = datetime.date.today().strftime("%Y-%m-%d")
+                
+            m_time = re.search(r'\b(\d{2}):(\d{2})\b', details)
+            if m_time:
+                event_time = m_time.group(0)
+                event_title = event_title.replace(m_time.group(0), "")
+                
+            event_title = re.sub(r'\b(às|as|em|dia|no|na)\b', '', event_title, flags=re.IGNORECASE)
+            event_title = re.sub(r'\s+', ' ', event_title).strip()
+            if not event_title:
+                event_title = "Compromisso sem título"
+            
+            assistant_payload["detalhes"] = {
+                "titulo": event_title,
+                "data": event_date,
+                "hora": event_time,
+                "localizacao": None,
+                "recorrencia": None
+            }
+
+        elif correct_intent == "completar_tarefa":
+            import re
+            user_param = None
+            task_search = details
+            for u in ['Cassi', 'Isa', 'Mari']:
+                if re.search(r'\b' + re.escape(u) + r'\b', details, re.IGNORECASE):
+                    user_param = u
+                    task_search = re.sub(r'\b(por|de|do|da|para|user|usuario)?\s*' + re.escape(u) + r'\b', '', task_search, flags=re.IGNORECASE)
+                    break
+            task_search = re.sub(r'\s+', ' ', task_search).strip()
+            assistant_payload["detalhes"] = {
+                "usuario": user_param,
+                "tarefa": task_search
+            }
+
+        elif correct_intent == "resgatar_recompensa":
+            import re
+            user_param = None
+            reward_search = details
+            for u in ['Cassi', 'Isa', 'Mari']:
+                if re.search(r'\b' + re.escape(u) + r'\b', details, re.IGNORECASE):
+                    user_param = u
+                    reward_search = re.sub(r'\b(por|de|do|da|para|user|usuario)?\s*' + re.escape(u) + r'\b', '', reward_search, flags=re.IGNORECASE)
+                    break
+            reward_search = re.sub(r'\s+', ' ', reward_search).strip()
+            assistant_payload["detalhes"] = {
+                "usuario": user_param,
+                "recompensa": reward_search
+            }
+
+        elif correct_intent == "listar_tarefas":
+            import re
+            user_param = None
+            for u in ['Cassi', 'Isa', 'Mari']:
+                if re.search(r'\b' + re.escape(u) + r'\b', details, re.IGNORECASE):
+                    user_param = u
+                    break
+            assistant_payload["detalhes"] = {
+                "usuario": user_param
+            }
+
+        elif correct_intent == "salvar_receita":
+            lines = [l.strip() for l in details.split('\n') if l.strip()]
+            nome = "Receita"
+            ingredientes_list = []
+            passo_list = []
+            if lines:
+                nome = lines[0]
+                in_passo = False
+                for line in lines[1:]:
+                    if "passo" in line.lower() or "preparo" in line.lower() or "modo" in line.lower():
+                        in_passo = True
+                        continue
+                    if in_passo:
+                        passo_list.append(line)
+                    else:
+                        ingredientes_list.append(line)
+            ingredientes_str = "\n".join(ingredientes_list) if ingredientes_list else "Ingredientes não especificados"
+            passo_str = "\n".join(passo_list) if passo_list else "Modo de preparo não especificado"
+            assistant_payload["detalhes"] = {
+                "nome": nome,
+                "ingredientes": ingredientes_str,
+                "passo_a_passo": passo_str
+            }
+
+        elif correct_intent == "deletar_receita":
+            assistant_payload["detalhes"] = {
+                "receita": details.strip()
+            }
+
+        elif correct_intent == "comprar_receita":
+            assistant_payload["detalhes"] = {
+                "receita": details.strip()
+            }
+            
+        elif correct_intent == "adicionar_transacao":
+            intent_local, details_local = parse_intent_locally(details)
+            if intent_local == 'adicionar_transacao':
+                desc = details_local.get('descricao', 'Transação')
+                val = details_local.get('valor', 0.0)
+            else:
+                desc = "Transação"
+                val = 0.0
+            assistant_payload["detalhes"] = {
+                "descricao": desc,
+                "valor": val
+            }
             
         assistant_str = json.dumps(assistant_payload)
         

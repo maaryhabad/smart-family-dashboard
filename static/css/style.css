@@ -1483,6 +1483,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .gold-icon {
+    display: inline-block;
     font-size: 1.8rem;
     margin-bottom: 0.1rem;
     animation: goldSpin 4s linear infinite;
