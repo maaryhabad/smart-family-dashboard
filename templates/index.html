@@ -264,7 +264,10 @@
                         <div class="finance-details-grid">
                             <!-- Transactions -->
                             <div class="glass-panel finance-section flex-2">
-                                <h3>Transações Recentes</h3>
+                                <div class="section-title-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                    <h3 style="margin: 0;">Transações Recentes</h3>
+                                    <button class="btn btn-primary btn-sm" id="btn-add-transacao">+ Lançar Transação</button>
+                                </div>
                                 <div class="table-container">
                                     <table class="data-table">
                                         <thead>
@@ -273,7 +276,9 @@
                                                 <th>Categoria</th>
                                                 <th>Data</th>
                                                 <th>Responsável</th>
+                                                <th>Status</th>
                                                 <th class="text-right">Valor</th>
+                                                <th style="width: 80px;" class="text-center">Ações</th>
                                             </tr>
                                         </thead>
                                         <tbody id="finance-transactions">
@@ -629,6 +634,104 @@
                     <div class="modal-footer"
                         style="margin-top: 28px; display:flex; justify-content:flex-end; gap:12px;">
                         <button type="button" class="btn btn-secondary" id="btn-cancel-despesa-modal"
+                            style="padding: 9px 18px; border-radius:8px; font-size:0.9rem;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"
+                            style="padding: 9px 18px; border-radius:8px; font-size:0.9rem; background:#5f27cd; color:white; border:none; box-shadow: 0 4px 12px var(--color-primary-glow);">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gerenciar Transação Modal -->
+    <div class="modal-overlay" id="transacao-modal">
+        <div class="modal-content glass-panel" style="max-width: 460px; width: 90%;">
+            <div class="modal-header">
+                <h3 style="display: flex; align-items: center; gap: 8px;">💰 <span id="transacao-modal-title">Lançar Transação</span></h3>
+                <button class="btn-close-modal" id="btn-close-transacao-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="transacao-form" onsubmit="event.preventDefault();">
+                    <!-- Tipo (Entrada / Saída) -->
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="transacao-tipo"
+                            style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Tipo de Transação</label>
+                        <select id="transacao-tipo" required
+                            style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem; cursor:pointer;">
+                            <option value="entrada" selected>📈 Entrada (Receita)</option>
+                            <option value="saida">📉 Saída (Despesa)</option>
+                        </select>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="transacao-descricao"
+                            style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Descrição</label>
+                        <input type="text" id="transacao-descricao" placeholder="Ex: Salário, Supermercado..." required
+                            style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem;">
+                    </div>
+
+                    <!-- Row 1: Valor e Data -->
+                    <div class="form-row" style="display: flex; gap: 12px; margin-bottom: 16px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="transacao-valor"
+                                style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Valor (R$)</label>
+                            <input type="number" id="transacao-valor" placeholder="0.00" required step="0.01" min="0.01"
+                                style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem;">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="transacao-data"
+                                style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Data</label>
+                            <input type="date" id="transacao-data" required
+                                style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem;">
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Categoria e Responsável -->
+                    <div class="form-row" style="display: flex; gap: 12px; margin-bottom: 16px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="transacao-categoria"
+                                style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Categoria</label>
+                            <select id="transacao-categoria" required
+                                style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem; cursor:pointer;">
+                                <option value="Receita" selected>💵 Receita (Entrada)</option>
+                                <option value="Habitação (Aluguel/Contas)">🏠 Habitação</option>
+                                <option value="Educação">📖 Educação</option>
+                                <option value="Alimentação e Supermercado">🛒 Alimentação</option>
+                                <option value="Saúde e Planos">🩺 Saúde</option>
+                                <option value="Transporte/Combustível">🚗 Transporte</option>
+                                <option value="Lazer e Streaming">🎮 Lazer</option>
+                                <option value="Outros">📝 Outros</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="transacao-responsavel"
+                                style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Responsável</label>
+                            <select id="transacao-responsavel" required
+                                style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem; cursor:pointer;">
+                                <option value="Família">Família</option>
+                                <option value="Mariana">Mariana</option>
+                                <option value="Cassi">Cassi</option>
+                                <option value="Isa">Isa</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Status -->
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="transacao-pago"
+                            style="display:block; margin-bottom:6px; font-weight:600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Status</label>
+                        <select id="transacao-pago" required
+                            style="width:100%; padding:10px 12px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid rgba(255,255,255,0.12); font-family:var(--font-body); font-size:0.92rem; cursor:pointer;">
+                            <option value="1" selected>✅ Pago / Concluído</option>
+                            <option value="0">⏳ Pendente / Atrasado</option>
+                        </select>
+                    </div>
+
+                    <!-- Footer / Buttons -->
+                    <div class="modal-footer"
+                        style="margin-top: 28px; display:flex; justify-content:flex-end; gap:12px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-transacao-modal"
                             style="padding: 9px 18px; border-radius:8px; font-size:0.9rem;">Cancelar</button>
                         <button type="submit" class="btn btn-primary"
                             style="padding: 9px 18px; border-radius:8px; font-size:0.9rem; background:#5f27cd; color:white; border:none; box-shadow: 0 4px 12px var(--color-primary-glow);">Salvar</button>

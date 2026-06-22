@@ -13,6 +13,33 @@ def get_db_connection(db_path=None):
     conn.row_factory = sqlite3.Row
     return conn
 
+def map_expense_category(cat):
+    mapping = {
+        "habitação": "Habitação (Aluguel/Contas)",
+        "habitacao": "Habitação (Aluguel/Contas)",
+        "educação": "Educação",
+        "educacao": "Educação",
+        "alimentação": "Alimentação e Supermercado",
+        "alimentacao": "Alimentação e Supermercado",
+        "saúde": "Saúde e Planos",
+        "saude": "Saúde e Planos",
+        "transporte": "Transporte/Combustível",
+        "lazer": "Lazer e Streaming",
+        "outros": "Outros"
+    }
+    return mapping.get(cat.lower(), "Outros") if cat else "Outros"
+
+def get_vencimento_date(dia_vencimento):
+    import datetime
+    import calendar
+    today = datetime.date.today()
+    try:
+        dt = datetime.date(today.year, today.month, int(dia_vencimento))
+    except ValueError:
+        last_day = calendar.monthrange(today.year, today.month)[1]
+        dt = datetime.date(today.year, today.month, min(int(dia_vencimento), last_day))
+    return dt.strftime('%d/%m/%Y')
+
 def init_db(db_path=None):
     """Initializes the database and seeds initial values if empty."""
     target_path = db_path if db_path else DATABASE_PATH
@@ -137,6 +164,38 @@ def init_db(db_path=None):
                 responsavel TEXT NOT NULL
             )
         ''')
+
+        # Check if new columns exist in transacoes, add if not
+        try:
+            cursor.execute("PRAGMA table_info(transacoes)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if 'pago' not in columns:
+                cursor.execute("ALTER TABLE transacoes ADD COLUMN pago INTEGER DEFAULT 1")
+            if 'despesa_recorrente_id' not in columns:
+                cursor.execute("ALTER TABLE transacoes ADD COLUMN despesa_recorrente_id INTEGER")
+            conn.commit()
+        except Exception:
+            pass
+
+        # Sync existing recurring expenses that do not have a transaction in transacoes
+        try:
+            cursor.execute("SELECT id, descricao, valor, categoria, dia_vencimento, pago FROM despesas_recorrentes")
+            despesas_list = cursor.fetchall()
+            for d in despesas_list:
+                cursor.execute("SELECT id FROM transacoes WHERE despesa_recorrente_id = ?", (d['id'],))
+                tx_exists = cursor.fetchone()
+                if not tx_exists:
+                    tx_desc = f"Despesa: {d['descricao']}"
+                    tx_valor = -abs(d['valor'])
+                    tx_cat = map_expense_category(d['categoria'])
+                    tx_date = get_vencimento_date(d['dia_vencimento'])
+                    cursor.execute('''
+                        INSERT INTO transacoes (descricao, valor, categoria, data, responsavel, pago, despesa_recorrente_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ''', (tx_desc, tx_valor, tx_cat, tx_date, "Família", d['pago'], d['id']))
+            conn.commit()
+        except Exception as e:
+            print(f"Error syncing existing despesas to transacoes: {e}")
 
         cursor.execute("SELECT COUNT(*) FROM transacoes")
         trans_count = cursor.fetchone()[0]
@@ -917,23 +976,61 @@ def delete_task_in_db(task_id, db_path=None):
 
 def update_despesa(id, descricao, valor, categoria, dia, tipo, total_parcelas):
     conn = get_db_connection(DATABASE_PATH)
-    conn.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         UPDATE despesas_recorrentes 
         SET descricao = ?, valor = ?, categoria = ?, dia_vencimento = ?, tipo = ?, total_parcelas = ?
         WHERE id = ?
     ''', (descricao, valor, categoria, dia, tipo, total_parcelas, id))
+    
+    # Update or insert corresponding transaction
+    tx_desc = f"Despesa: {descricao}"
+    tx_valor = -abs(valor)
+    tx_cat = map_expense_category(categoria)
+    tx_date = get_vencimento_date(dia)
+    
+    cursor.execute("SELECT id FROM transacoes WHERE despesa_recorrente_id = ?", (id,))
+    tx_row = cursor.fetchone()
+    if tx_row:
+        cursor.execute('''
+            UPDATE transacoes
+            SET descricao = ?, valor = ?, categoria = ?, data = ?
+            WHERE despesa_recorrente_id = ?
+        ''', (tx_desc, tx_valor, tx_cat, tx_date, id))
+    else:
+        cursor.execute("SELECT pago FROM despesas_recorrentes WHERE id = ?", (id,))
+        pago_status = cursor.fetchone()[0]
+        cursor.execute('''
+            INSERT INTO transacoes (descricao, valor, categoria, data, responsavel, pago, despesa_recorrente_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (tx_desc, tx_valor, tx_cat, tx_date, "Família", pago_status, id))
+        
     conn.commit()
     conn.close()
 
 def save_despesa(descricao, valor, categoria, dia, tipo, total_parcelas):
     conn = get_db_connection(DATABASE_PATH)
-    conn.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         INSERT INTO despesas_recorrentes 
-        (descricao, valor, categoria, dia_vencimento, tipo, total_parcelas)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (descricao, valor, categoria, dia_vencimento, tipo, total_parcelas, pago)
+        VALUES (?, ?, ?, ?, ?, ?, 0)
     ''', (descricao, valor, categoria, dia, tipo, total_parcelas))
+    new_despesa_id = cursor.lastrowid
+    
+    # Also create a corresponding unpaid transaction in transacoes
+    tx_desc = f"Despesa: {descricao}"
+    tx_valor = -abs(valor)
+    tx_cat = map_expense_category(categoria)
+    tx_date = get_vencimento_date(dia)
+    cursor.execute('''
+        INSERT INTO transacoes (descricao, valor, categoria, data, responsavel, pago, despesa_recorrente_id)
+        VALUES (?, ?, ?, ?, ?, 0, ?)
+    ''', (tx_desc, tx_valor, tx_cat, tx_date, "Família", new_despesa_id))
+    
     conn.commit()
     conn.close()
+    return new_despesa_id
 
 def get_all_despesas():
     conn = get_db_connection(DATABASE_PATH)
@@ -945,17 +1042,56 @@ def get_all_despesas():
 
 def delete_despesa(id):
     conn = get_db_connection(DATABASE_PATH)
-    conn.execute('DELETE FROM despesas_recorrentes WHERE id = ?', (id,))
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM transacoes WHERE despesa_recorrente_id = ?', (id,))
+    cursor.execute('DELETE FROM despesas_recorrentes WHERE id = ?', (id,))
     conn.commit()
     conn.close()
 
 def toggle_despesa_pago(id, pago):
     conn = get_db_connection(DATABASE_PATH)
-    conn.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         UPDATE despesas_recorrentes 
         SET pago = ?
         WHERE id = ?
     ''', (pago, id))
+    
+    cursor.execute('''
+        UPDATE transacoes
+        SET pago = ?
+        WHERE despesa_recorrente_id = ?
+    ''', (pago, id))
+    
+    conn.commit()
+    conn.close()
+
+def delete_transaction_from_db(id):
+    conn = get_db_connection(DATABASE_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT despesa_recorrente_id FROM transacoes WHERE id = ?", (id,))
+    row = cursor.fetchone()
+    if row and row['despesa_recorrente_id']:
+        despesa_id = row['despesa_recorrente_id']
+        cursor.execute("UPDATE despesas_recorrentes SET pago = 0 WHERE id = ?", (despesa_id,))
+        # Delete transaction
+        cursor.execute("DELETE FROM transacoes WHERE id = ?", (id,))
+        # Re-create the unpaid transaction so it shows as pending/overdue
+        cursor.execute("SELECT descricao, valor, categoria, dia_vencimento FROM despesas_recorrentes WHERE id = ?", (despesa_id,))
+        d_row = cursor.fetchone()
+        if d_row:
+            tx_desc = f"Despesa: {d_row['descricao']}"
+            tx_valor = -abs(d_row['valor'])
+            tx_cat = map_expense_category(d_row['categoria'])
+            tx_date = get_vencimento_date(d_row['dia_vencimento'])
+            cursor.execute('''
+                INSERT INTO transacoes (descricao, valor, categoria, data, responsavel, pago, despesa_recorrente_id)
+                VALUES (?, ?, ?, ?, ?, 0, ?)
+            ''', (tx_desc, tx_valor, tx_cat, tx_date, "Família", despesa_id))
+    else:
+        cursor.execute("DELETE FROM transacoes WHERE id = ?", (id,))
+        
     conn.commit()
     conn.close()
 
@@ -963,7 +1099,7 @@ def get_all_transactions(db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, descricao, valor, categoria, data, responsavel FROM transacoes ORDER BY id DESC")
+    cursor.execute("SELECT id, descricao, valor, categoria, data, responsavel, pago FROM transacoes ORDER BY id DESC")
     rows = cursor.fetchall()
     transactions = [
         {
@@ -972,20 +1108,21 @@ def get_all_transactions(db_path=None):
             "category": row["categoria"],
             "date": row["data"],
             "user": row["responsavel"],
-            "id": row["id"]
+            "id": row["id"],
+            "pago": row["pago"] if "pago" in dict(row) else 1
         }
         for row in rows
     ]
     conn.close()
     return transactions
 
-def save_transaction_to_db(descricao, valor, categoria, data, responsavel, db_path=None):
+def save_transaction_to_db(descricao, valor, categoria, data, responsavel, pago=1, db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO transacoes (descricao, valor, categoria, data, responsavel) VALUES (?, ?, ?, ?, ?)",
-        (descricao, valor, categoria, data, responsavel)
+        "INSERT INTO transacoes (descricao, valor, categoria, data, responsavel, pago) VALUES (?, ?, ?, ?, ?, ?)",
+        (descricao, valor, categoria, data, responsavel, pago)
     )
     conn.commit()
     trans_id = cursor.lastrowid

@@ -108,8 +108,8 @@ def get_financas():
     transactions = get_all_transactions()
     
     # Calculate summary dynamically
-    income = sum(t["amount"] for t in transactions if t["amount"] > 0)
-    expenses = sum(abs(t["amount"]) for t in transactions if t["amount"] < 0)
+    income = sum(t["amount"] for t in transactions if t["amount"] > 0 and t.get("pago", 1) == 1)
+    expenses = sum(abs(t["amount"]) for t in transactions if t["amount"] < 0 and t.get("pago", 1) == 1)
     savings = income - expenses
     savings_rate = round((savings / income * 100), 1) if income > 0 else 0.0
     
@@ -139,7 +139,7 @@ def get_financas():
     }
     
     for t in transactions:
-        if t["amount"] < 0:
+        if t["amount"] < 0 and t.get("pago", 1) == 1:
             cat_key = category_mapping.get(t["category"].lower(), "Outros")
             categories_map[cat_key]["value"] += abs(t["amount"])
             
@@ -635,6 +635,50 @@ def toggle_pago_despesa():
         from modules.ia_memoria.database import toggle_despesa_pago
         toggle_despesa_pago(data['id'], data['pago'])
         return jsonify({"success": True, "message": "Status de pagamento atualizado!"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route('/api/financas/transacoes', methods=['POST'])
+def adicionar_transacao_manual():
+    data = request.json
+    try:
+        from modules.ia_memoria.database import save_transaction_to_db
+        import datetime
+        
+        descricao = data['descricao'].strip()
+        valor = float(data['valor'])
+        tipo = data['tipo'] # 'entrada' or 'saida'
+        categoria = data['categoria']
+        responsavel = data.get('responsavel', 'Família')
+        pago = int(data.get('pago', 1))
+        
+        if tipo == 'saida':
+            valor = -abs(valor)
+        else:
+            valor = abs(valor)
+            
+        raw_date = data.get('data') # e.g. "2026-06-22"
+        if raw_date:
+            try:
+                dt = datetime.datetime.strptime(raw_date, '%Y-%m-%d')
+                date_str = dt.strftime('%d/%m/%Y')
+            except Exception:
+                date_str = datetime.date.today().strftime('%d/%m/%Y')
+        else:
+            date_str = datetime.date.today().strftime('%d/%m/%Y')
+            
+        save_transaction_to_db(descricao, valor, categoria, date_str, responsavel, pago)
+        return jsonify({"success": True, "message": "Transação registrada com sucesso!"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+@app.route('/api/financas/transacoes/excluir', methods=['POST'])
+def excluir_transacao_manual():
+    data = request.json
+    try:
+        from modules.ia_memoria.database import delete_transaction_from_db
+        delete_transaction_from_db(data['id'])
+        return jsonify({"success": True, "message": "Transação excluída com sucesso!"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 

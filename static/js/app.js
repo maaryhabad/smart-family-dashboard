@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupFeedbackListeners();
     setupCalendarListeners();
     setupDespesasListeners();
+    setupTransacoesListeners();
     setupVoiceRecognition('btn-chat-mic', 'chat-input');
     setupVoiceRecognition('btn-modal-mic', 'edit-mem-content');
 
@@ -195,13 +196,41 @@ async function fetchFinanceData() {
             const amountClass = tx.amount > 0 ? 'text-green' : 'text-red';
             const prefix = tx.amount > 0 ? '+' : '';
 
+            let statusBadge = '';
+            if (tx.pago === 1) {
+                statusBadge = '<span class="badge badge-success">Pago</span>';
+            } else {
+                const parts = tx.date.split('/');
+                if (parts.length === 3) {
+                    const day = parseInt(parts[0], 10);
+                    const month = parseInt(parts[1], 10) - 1;
+                    const year = parseInt(parts[2], 10);
+                    const txDate = new Date(year, month, day);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (txDate < today) {
+                        statusBadge = '<span class="badge badge-danger">Atrasado</span>';
+                    } else {
+                        statusBadge = '<span class="badge badge-warning">Pendente</span>';
+                    }
+                } else {
+                    statusBadge = '<span class="badge badge-warning">Pendente</span>';
+                }
+            }
+
             row.innerHTML = `
                 <td><strong>${tx.description}</strong></td>
                 <td><span class="tag-difficulty">${tx.category}</span></td>
                 <td>${tx.date}</td>
                 <td>${tx.user}</td>
+                <td>${statusBadge}</td>
                 <td class="text-right ${amountClass}"><strong>${prefix}${formatCurrency(tx.amount)}</strong></td>
+                <td class="text-center">
+                    <button class="btn-delete-transacao" style="cursor: pointer; background: none; border: none; font-size: 1rem;" title="Excluir Transação">🗑️</button>
+                </td>
             `;
+            const btnDelete = row.querySelector('.btn-delete-transacao');
+            btnDelete.addEventListener('click', () => excluirTransacao(tx.id));
             txBody.appendChild(row);
         });
 
@@ -614,6 +643,143 @@ function setupDespesasListeners() {
                 showToast("Erro de rede ao salvar despesa.", "warning");
             }
         });
+    }
+}
+
+function setupTransacoesListeners() {
+    const addBtn = document.getElementById('btn-add-transacao');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            abrirModalTransacao();
+        });
+    }
+
+    const closeBtn = document.getElementById('btn-close-transacao-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            const modal = document.getElementById('transacao-modal');
+            if (modal) modal.classList.remove('active');
+        });
+    }
+
+    const cancelBtn = document.getElementById('btn-cancel-transacao-modal');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            const modal = document.getElementById('transacao-modal');
+            if (modal) modal.classList.remove('active');
+        });
+    }
+
+    const tipoSelect = document.getElementById('transacao-tipo');
+    const catSelect = document.getElementById('transacao-categoria');
+    if (tipoSelect && catSelect) {
+        tipoSelect.addEventListener('change', () => {
+            if (tipoSelect.value === 'entrada') {
+                catSelect.value = 'Receita';
+            } else {
+                if (catSelect.value === 'Receita') {
+                    catSelect.value = 'Outros';
+                }
+            }
+        });
+    }
+
+    const form = document.getElementById('transacao-form');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const descricao = document.getElementById('transacao-descricao').value.trim();
+            const valor = parseFloat(document.getElementById('transacao-valor').value);
+            const dataVal = document.getElementById('transacao-data').value;
+            const categoria = catSelect.value;
+            const responsavel = document.getElementById('transacao-responsavel').value;
+            const pago = parseInt(document.getElementById('transacao-pago').value);
+            const tipo = tipoSelect.value;
+
+            if (!descricao || isNaN(valor) || !dataVal || !categoria || !responsavel) {
+                showToast("Por favor, preencha todos os campos obrigatórios.", "warning");
+                return;
+            }
+
+            const payload = {
+                descricao,
+                valor,
+                data: dataVal,
+                categoria,
+                responsavel,
+                pago,
+                tipo
+            };
+
+            try {
+                const res = await fetch('/api/financas/transacoes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const resData = await res.json();
+
+                if (res.ok && resData.success) {
+                    showToast(resData.message, "success");
+                    const modal = document.getElementById('transacao-modal');
+                    if (modal) modal.classList.remove('active');
+                    fetchFinanceData();
+                    carregarDespesas(); // Refresh checklist too since linked status could have changed
+                } else {
+                    showToast(`Erro: ${resData.error || 'Não foi possível salvar.'}`, "warning");
+                }
+            } catch (err) {
+                console.error("Erro ao salvar transação:", err);
+                showToast("Erro de rede ao salvar transação.", "warning");
+            }
+        });
+    }
+}
+
+function abrirModalTransacao() {
+    const modal = document.getElementById('transacao-modal');
+    if (!modal) return;
+    const form = document.getElementById('transacao-form');
+    if (form) form.reset();
+
+    // Default data to today's date
+    const dateInput = document.getElementById('transacao-data');
+    if (dateInput) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    // Default category to Receita (for Entrada default)
+    const catSelect = document.getElementById('transacao-categoria');
+    if (catSelect) catSelect.value = 'Receita';
+
+    modal.classList.add('active');
+}
+
+async function excluirTransacao(id) {
+    if (confirm("Tem certeza que deseja excluir esta transação?")) {
+        try {
+            const res = await fetch('/api/financas/transacoes/excluir', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                showToast("Transação excluída com sucesso!", "success");
+                fetchFinanceData();
+                carregarDespesas(); // Refresh despesas since toggling linked transactions changes despesa status
+            } else {
+                showToast(`Erro: ${data.error || 'Não foi possível excluir.'}`, "warning");
+            }
+        } catch (err) {
+            console.error("Erro ao excluir transação:", err);
+            showToast("Erro de rede ao excluir transação.", "warning");
+        }
     }
 }
 
