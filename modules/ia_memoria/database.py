@@ -82,6 +82,10 @@ def init_db(db_path=None):
             cursor.execute("ALTER TABLE eventos ADD COLUMN localizacao TEXT")
         if 'recorrencia' not in columns:
             cursor.execute("ALTER TABLE eventos ADD COLUMN recorrencia TEXT")
+        if 'data_fim' not in columns:
+            cursor.execute("ALTER TABLE eventos ADD COLUMN data_fim TEXT")
+        if 'hora_fim' not in columns:
+            cursor.execute("ALTER TABLE eventos ADD COLUMN hora_fim TEXT")
             
         # Create table usuarios
         cursor.execute('''
@@ -346,13 +350,13 @@ def get_all_events(db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, titulo, data, hora, responsavel, cor, categoria, google_event_id, localizacao, recorrencia FROM eventos")
+    cursor.execute("SELECT id, titulo, data, hora, responsavel, cor, categoria, google_event_id, localizacao, recorrencia, data_fim, hora_fim FROM eventos")
     rows = cursor.fetchall()
     events = [dict(row) for row in rows]
     conn.close()
     return events
 
-def save_event(titulo, data, hora, responsavel='Família', cor='#5f27cd', categoria='Familiar', google_event_id=None, localizacao=None, recorrencia=None, db_path=None, conn=None):
+def save_event(titulo, data, hora, responsavel='Família', cor='#5f27cd', categoria='Familiar', google_event_id=None, localizacao=None, recorrencia=None, data_fim=None, hora_fim=None, db_path=None, conn=None):
     """Saves a new event in the database."""
     target_path = db_path if db_path else DATABASE_PATH
     should_close = False
@@ -360,9 +364,13 @@ def save_event(titulo, data, hora, responsavel='Família', cor='#5f27cd', catego
         conn = get_db_connection(target_path)
         should_close = True
     cursor = conn.cursor()
+    
+    if not data_fim:
+        data_fim = data
+        
     cursor.execute(
-        "INSERT INTO eventos (titulo, data, hora, responsavel, cor, categoria, google_event_id, localizacao, recorrencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (titulo, data, hora, responsavel, cor, categoria, google_event_id, localizacao, recorrencia)
+        "INSERT INTO eventos (titulo, data, hora, responsavel, cor, categoria, google_event_id, localizacao, recorrencia, data_fim, hora_fim) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (titulo, data, hora, responsavel, cor, categoria, google_event_id, localizacao, recorrencia, data_fim, hora_fim)
     )
     if should_close:
         conn.commit()
@@ -420,14 +428,18 @@ def update_event_google_id(event_id, google_id, db_path=None):
     conn.commit()
     conn.close()
 
-def update_event(event_id, titulo, data, hora, responsavel='Família', cor='#5f27cd', categoria='Familiar', localizacao=None, recorrencia=None, db_path=None):
+def update_event(event_id, titulo, data, hora, responsavel='Família', cor='#5f27cd', categoria='Familiar', localizacao=None, recorrencia=None, data_fim=None, hora_fim=None, db_path=None):
     """Updates an existing event in the database by its ID."""
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
+    
+    if not data_fim:
+        data_fim = data
+        
     cursor.execute(
-        "UPDATE eventos SET titulo = ?, data = ?, hora = ?, responsavel = ?, cor = ?, categoria = ?, localizacao = ?, recorrencia = ? WHERE id = ?",
-        (titulo, data, hora, responsavel, cor, categoria, localizacao, recorrencia, event_id)
+        "UPDATE eventos SET titulo = ?, data = ?, hora = ?, responsavel = ?, cor = ?, categoria = ?, localizacao = ?, recorrencia = ?, data_fim = ?, hora_fim = ? WHERE id = ?",
+        (titulo, data, hora, responsavel, cor, categoria, localizacao, recorrencia, data_fim, hora_fim, event_id)
     )
     conn.commit()
     conn.close()

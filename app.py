@@ -183,7 +183,7 @@ def get_calendario():
     cursor.execute('''
         SELECT 
             e.id, e.titulo, e.data, e.hora, e.responsavel, e.cor, e.categoria, 
-            e.google_event_id, e.localizacao, e.recorrencia,
+            e.google_event_id, e.localizacao, e.recorrencia, e.data_fim, e.hora_fim,
             t.id AS task_id, t.completed AS task_completed, t.reward_xp, t.reward_gold
         FROM eventos e
         LEFT JOIN tarefas t ON e.id = t.evento_calendario_id
@@ -205,6 +205,8 @@ def get_calendario():
             "google_event_id": r["google_event_id"],
             "localizacao": r["localizacao"],
             "recorrencia": r["recorrencia"],
+            "data_fim": r["data_fim"],
+            "hora_fim": r["hora_fim"],
             "is_task": is_task,
             "task_id": r["task_id"],
             "completed": bool(r["task_completed"]) if is_task else False,
@@ -252,6 +254,8 @@ def save_or_update_event_route():
     categoria = data.get("categoria", "Familiar").strip()
     localizacao = data.get("localizacao", "").strip() or None
     recorrencia = data.get("recorrencia", "").strip() or None
+    data_fim = data.get("data_fim", "").strip() or None
+    hora_fim = data.get("hora_fim", "").strip() or None
     
     if not titulo or not data_evt or not hora:
         return jsonify({"success": False, "error": "Título, Data e Hora são obrigatórios."}), 400
@@ -269,7 +273,9 @@ def save_or_update_event_route():
             cor=cor,
             categoria=categoria,
             localizacao=localizacao,
-            recorrencia=recorrencia
+            recorrencia=recorrencia,
+            data_fim=data_fim,
+            hora_fim=hora_fim
         )
         
         events = get_all_events()
@@ -281,7 +287,9 @@ def save_or_update_event_route():
                 event_date=data_evt,
                 event_time=hora,
                 localizacao=localizacao,
-                recorrencia=recorrencia
+                recorrencia=recorrencia,
+                data_fim=data_fim,
+                hora_fim=hora_fim
             )
         return jsonify({"success": True, "message": "Compromisso atualizado com sucesso!"})
     else:
@@ -293,9 +301,11 @@ def save_or_update_event_route():
             cor=cor,
             categoria=categoria,
             localizacao=localizacao,
-            recorrencia=recorrencia
+            recorrencia=recorrencia,
+            data_fim=data_fim,
+            hora_fim=hora_fim
         )
-        push_event_to_google_background(new_id, titulo, data_evt, hora, localizacao, recorrencia)
+        push_event_to_google_background(new_id, titulo, data_evt, hora, localizacao, recorrencia, data_fim, hora_fim)
         return jsonify({"success": True, "message": "Compromisso cadastrado com sucesso!"})
 
 @app.route('/api/calendario/excluir', methods=['POST'])

@@ -763,6 +763,45 @@ class TestOllamaIntegration(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIsNone(res)
 
+    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    def test_chat_ollama_agendar_calendario_multi(self, mock_ollama):
+        mock_ollama.return_value = (True, {
+            "intencao": "agendar_calendario",
+            "detalhes": {
+                "compromissos": [
+                    {
+                        "titulo": "Férias da Isa",
+                        "data": "2026-07-13",
+                        "data_fim": "2026-07-27",
+                        "hora": "00:00"
+                    },
+                    {
+                        "titulo": "Primeiro dia de aula",
+                        "data": "2026-07-28",
+                        "hora": "08:00"
+                    }
+                ]
+            }
+        })
+        
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "anota na agenda, as férias da Isa vão de 13/07 até o dia 27/07. E no dia 28/07 é o primeiro dia de aula da Isa"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("compromissos agendados com sucesso", data["reply"])
+        self.assertIn("Férias da Isa", data["reply"])
+        self.assertIn("Primeiro dia de aula", data["reply"])
+        
+        events = get_all_events(TEST_DB_PATH)
+        vacation = next(e for e in events if e["titulo"] == "Férias da Isa")
+        aula = next(e for e in events if e["titulo"] == "Primeiro dia de aula")
+        
+        self.assertEqual(vacation["data"], "2026-07-13")
+        self.assertEqual(vacation["data_fim"], "2026-07-27")
+        self.assertEqual(aula["data"], "2026-07-28")
+        self.assertEqual(aula["data_fim"], "2026-07-28")
+
 
 class TestGoogleCalendarSync(unittest.TestCase):
     def setUp(self):

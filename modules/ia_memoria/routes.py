@@ -554,74 +554,124 @@ def ia_chat():
                 )
                 is_ollama_parsed = True
             elif intent == "agendar_calendario":
-                event_title = detalhes.get("titulo") or "Compromisso sem título"
-                event_date = detalhes.get("data")
-                event_time = detalhes.get("hora") or "00:00"
-                localizacao = detalhes.get("localizacao")
-                recorrencia = detalhes.get("recorrencia")
+                compromissos = detalhes.get("compromissos")
+                if not compromissos:
+                    # Fallback to single event for backward compatibility
+                    compromissos = [detalhes]
                 
-                if not event_date:
-                    import datetime
-                    event_date = datetime.date.today().strftime("%Y-%m-%d")
+                reply_events = []
+                for comp in compromissos:
+                    event_title = comp.get("titulo") or "Compromisso sem título"
+                    event_date = comp.get("data")
+                    event_time = comp.get("hora") or "00:00"
+                    localizacao = comp.get("localizacao")
+                    recorrencia = comp.get("recorrencia")
+                    data_fim = comp.get("data_fim")
+                    hora_fim = comp.get("hora_fim")
                     
-                event_id = save_event(
-                    titulo=event_title,
-                    data=event_date,
-                    hora=event_time,
-                    responsavel='Família',
-                    cor='#5f27cd',
-                    categoria='Familiar',
-                    localizacao=localizacao,
-                    recorrencia=recorrencia
-                )
-                
-                try:
-                    from .google_calendar import push_event_to_google_background
-                    push_event_to_google_background(event_id, event_title, event_date, event_time, localizacao, recorrencia)
-                except Exception as ex:
-                    print(f"Google Calendar background sync trigger failed: {ex}")
-                
-                try:
-                    parts = event_date.split("-")
-                    formatted_date = f"{parts[2]}/{parts[1]}/{parts[0]}"
-                except Exception:
-                    formatted_date = event_date
+                    if not event_date:
+                        import datetime
+                        event_date = datetime.date.today().strftime("%Y-%m-%d")
+                    if not data_fim:
+                        data_fim = event_date
+                        
+                    event_id = save_event(
+                        titulo=event_title,
+                        data=event_date,
+                        hora=event_time,
+                        responsavel='Família',
+                        cor='#5f27cd',
+                        categoria='Familiar',
+                        localizacao=localizacao,
+                        recorrencia=recorrencia,
+                        data_fim=data_fim,
+                        hora_fim=hora_fim
+                    )
                     
-                recurrence_desc = None
-                if recorrencia:
-                    if "FREQ=WEEKLY" in recorrencia:
-                        day_map = {
-                            "MO": "segunda-feira",
-                            "TU": "terça-feira",
-                            "WE": "quarta-feira",
-                            "TH": "quinta-feira",
-                            "FR": "sexta-feira",
-                            "SA": "sábado",
-                            "SU": "domingo"
-                        }
-                        day_found = None
-                        for code, pt in day_map.items():
-                            if f"BYDAY={code}" in recorrencia:
-                                day_found = pt
-                                break
-                        if day_found:
-                            recurrence_desc = f"Toda {day_found}" if "feira" in day_found else f"Todo {day_found}"
+                    try:
+                        from .google_calendar import push_event_to_google_background
+                        push_event_to_google_background(event_id, event_title, event_date, event_time, localizacao, recorrencia, data_fim, hora_fim)
+                    except Exception as ex:
+                        print(f"Google Calendar background sync trigger failed: {ex}")
+                    
+                    try:
+                        parts = event_date.split("-")
+                        formatted_date = f"{parts[2]}/{parts[1]}/{parts[0]}"
+                    except Exception:
+                        formatted_date = event_date
+                        
+                    try:
+                        parts_fim = data_fim.split("-")
+                        formatted_date_fim = f"{parts_fim[2]}/{parts_fim[1]}/{parts_fim[0]}"
+                    except Exception:
+                        formatted_date_fim = data_fim
+                        
+                    recurrence_desc = None
+                    if recorrencia:
+                        if "FREQ=WEEKLY" in recorrencia:
+                            day_map = {
+                                "MO": "segunda-feira",
+                                "TU": "terça-feira",
+                                "WE": "quarta-feira",
+                                "TH": "quinta-feira",
+                                "FR": "sexta-feira",
+                                "SA": "sábado",
+                                "SU": "domingo"
+                            }
+                            day_found = None
+                            for code, pt in day_map.items():
+                                if f"BYDAY={code}" in recorrencia:
+                                    day_found = pt
+                                    break
+                            if day_found:
+                                recurrence_desc = f"Toda {day_found}" if "feira" in day_found else f"Todo {day_found}"
+                            else:
+                                recurrence_desc = "Semanal"
                         else:
-                            recurrence_desc = "Semanal"
-                    else:
-                        recurrence_desc = recorrencia
-                    
-                reply_text = (
-                    f"📅 **Compromisso agendado com sucesso!**<br><br>"
-                    f"📌 **Evento:** {event_title}<br>"
-                    f"📅 **Data:** {formatted_date}<br>"
-                    f"🕒 **Hora:** {event_time}<br>"
-                )
-                if localizacao:
-                    reply_text += f"📍 **Local:** {localizacao}<br>"
-                if recurrence_desc:
-                    reply_text += f"🔁 **Repetição:** {recurrence_desc}<br>"
-                reply_text += f"<br>💡 *Sincronizando com o Google Calendar em background...*"
+                            recurrence_desc = recorrencia
+                            
+                    reply_events.append({
+                        "titulo": event_title,
+                        "data": formatted_date,
+                        "data_fim": formatted_date_fim,
+                        "hora": event_time,
+                        "hora_fim": hora_fim,
+                        "localizacao": localizacao,
+                        "recurrence_desc": recurrence_desc
+                    })
+                
+                if len(reply_events) == 1:
+                    evt = reply_events[0]
+                    formatted_range = evt["data"]
+                    if evt["data_fim"] and evt["data_fim"] != evt["data"]:
+                        formatted_range += f" até {evt['data_fim']}"
+                        
+                    reply_text = (
+                        f"📅 **Compromisso agendado com sucesso!**<br><br>"
+                        f"📌 **Evento:** {evt['titulo']}<br>"
+                        f"📅 **Data:** {formatted_range}<br>"
+                        f"🕒 **Hora:** {evt['hora']}<br>"
+                    )
+                    if evt['localizacao']:
+                        reply_text += f"📍 **Local:** {evt['localizacao']}<br>"
+                    if evt['recurrence_desc']:
+                        reply_text += f"🔁 **Repetição:** {evt['recurrence_desc']}<br>"
+                    reply_text += f"<br>💡 *Sincronizando com o Google Calendar em background...*"
+                else:
+                    reply_text = f"📅 **{len(reply_events)} compromissos agendados com sucesso!**<br><br>"
+                    for idx, evt in enumerate(reply_events):
+                        formatted_range = evt["data"]
+                        if evt["data_fim"] and evt["data_fim"] != evt["data"]:
+                            formatted_range += f" até {evt['data_fim']}"
+                        reply_text += f"**{idx+1}. {evt['titulo']}**<br>"
+                        reply_text += f"📅 Data: {formatted_range}<br>"
+                        reply_text += f"🕒 Hora: {evt['hora']}<br>"
+                        if evt['localizacao']:
+                            reply_text += f"📍 Local: {evt['localizacao']}<br>"
+                        if evt['recurrence_desc']:
+                            reply_text += f"🔁 Repetição: {evt['recurrence_desc']}<br>"
+                        reply_text += "<br>"
+                    reply_text += f"💡 *Sincronizando com o Google Calendar em background...*"
                 is_ollama_parsed = True
             elif intent == "remover_calendario":
                 event_title = detalhes.get("titulo")
@@ -1611,29 +1661,49 @@ def feedback_retrain():
             import re
             import datetime
             event_date = None
+            data_fim = None
             event_time = "00:00"
             event_title = details
             
-            m_iso = re.search(r'\b(\d{4})-(\d{2})-(\d{2})\b', details)
-            m_br = re.search(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', details)
-            if m_iso:
-                event_date = m_iso.group(0)
-                event_title = event_title.replace(m_iso.group(0), "")
-            elif m_br:
-                day = m_br.group(1)
-                month = m_br.group(2)
-                year = m_br.group(3) if m_br.group(3) else str(datetime.date.today().year)
-                event_date = f"{year}-{month}-{day}"
-                event_title = event_title.replace(m_br.group(0), "")
+            # Find all dates
+            m_iso_list = re.findall(r'\b(\d{4})-(\d{2})-(\d{2})\b', details)
+            m_br_list = re.findall(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', details)
+            
+            # Remove date strings from title
+            all_dates_in_details = re.findall(r'\b\d{4}-\d{2}-\d{2}\b|\b\d{2}/\d{2}(?:/\d{4})?\b', details)
+            for d_str in all_dates_in_details:
+                event_title = event_title.replace(d_str, "")
+                
+            if m_iso_list:
+                if len(m_iso_list) >= 2:
+                    event_date = m_iso_list[0]
+                    data_fim = m_iso_list[1]
+                else:
+                    event_date = m_iso_list[0]
+            elif m_br_list:
+                dates_parsed = []
+                for m in m_br_list:
+                    day = m[0]
+                    month = m[1]
+                    year = m[2] if m[2] else str(datetime.date.today().year)
+                    dates_parsed.append(f"{year}-{month}-{day}")
+                if len(dates_parsed) >= 2:
+                    event_date = dates_parsed[0]
+                    data_fim = dates_parsed[1]
+                else:
+                    event_date = dates_parsed[0]
             else:
                 event_date = datetime.date.today().strftime("%Y-%m-%d")
+                
+            if not data_fim:
+                data_fim = event_date
                 
             m_time = re.search(r'\b(\d{2}):(\d{2})\b', details)
             if m_time:
                 event_time = m_time.group(0)
                 event_title = event_title.replace(m_time.group(0), "")
                 
-            event_title = re.sub(r'\b(às|as|em|dia|no|na)\b', '', event_title, flags=re.IGNORECASE)
+            event_title = re.sub(r'\b(às|as|em|dia|no|na|de|ate|até|a)\b', '', event_title, flags=re.IGNORECASE)
             event_title = re.sub(r'\s+', ' ', event_title).strip()
             if not event_title:
                 event_title = "Compromisso sem título"
@@ -1646,11 +1716,13 @@ def feedback_retrain():
                 cor='#5f27cd',
                 categoria='Familiar',
                 localizacao=None,
-                recorrencia=None
+                recorrencia=None,
+                data_fim=data_fim,
+                hora_fim=None
             )
             try:
                 from .google_calendar import push_event_to_google_background
-                push_event_to_google_background(event_id, event_title, event_date, event_time, None, None)
+                push_event_to_google_background(event_id, event_title, event_date, event_time, None, None, data_fim, None)
             except Exception as ex:
                 print(f"Google Calendar background sync trigger failed: {ex}")
 
@@ -1991,39 +2063,63 @@ def feedback_retrain():
             import re
             import datetime
             event_date = None
+            data_fim = None
             event_time = "00:00"
             event_title = details
             
-            m_iso = re.search(r'\b(\d{4})-(\d{2})-(\d{2})\b', details)
-            m_br = re.search(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', details)
-            if m_iso:
-                event_date = m_iso.group(0)
-                event_title = event_title.replace(m_iso.group(0), "")
-            elif m_br:
-                day = m_br.group(1)
-                month = m_br.group(2)
-                year = m_br.group(3) if m_br.group(3) else str(datetime.date.today().year)
-                event_date = f"{year}-{month}-{day}"
-                event_title = event_title.replace(m_br.group(0), "")
+            # Find all dates
+            m_iso_list = re.findall(r'\b(\d{4})-(\d{2})-(\d{2})\b', details)
+            m_br_list = re.findall(r'\b(\d{2})/(\d{2})(?:/(\d{4}))?\b', details)
+            
+            # Remove date strings from title
+            all_dates_in_details = re.findall(r'\b\d{4}-\d{2}-\d{2}\b|\b\d{2}/\d{2}(?:/\d{4})?\b', details)
+            for d_str in all_dates_in_details:
+                event_title = event_title.replace(d_str, "")
+                
+            if m_iso_list:
+                if len(m_iso_list) >= 2:
+                    event_date = m_iso_list[0]
+                    data_fim = m_iso_list[1]
+                else:
+                    event_date = m_iso_list[0]
+            elif m_br_list:
+                dates_parsed = []
+                for m in m_br_list:
+                    day = m[0]
+                    month = m[1]
+                    year = m[2] if m[2] else str(datetime.date.today().year)
+                    dates_parsed.append(f"{year}-{month}-{day}")
+                if len(dates_parsed) >= 2:
+                    event_date = dates_parsed[0]
+                    data_fim = dates_parsed[1]
+                else:
+                    event_date = dates_parsed[0]
             else:
                 event_date = datetime.date.today().strftime("%Y-%m-%d")
+                
+            if not data_fim:
+                data_fim = event_date
                 
             m_time = re.search(r'\b(\d{2}):(\d{2})\b', details)
             if m_time:
                 event_time = m_time.group(0)
                 event_title = event_title.replace(m_time.group(0), "")
                 
-            event_title = re.sub(r'\b(às|as|em|dia|no|na)\b', '', event_title, flags=re.IGNORECASE)
+            event_title = re.sub(r'\b(às|as|em|dia|no|na|de|ate|até|a)\b', '', event_title, flags=re.IGNORECASE)
             event_title = re.sub(r'\s+', ' ', event_title).strip()
             if not event_title:
                 event_title = "Compromisso sem título"
             
             assistant_payload["detalhes"] = {
-                "titulo": event_title,
-                "data": event_date,
-                "hora": event_time,
-                "localizacao": None,
-                "recorrencia": None
+                "compromissos": [{
+                    "titulo": event_title,
+                    "data": event_date,
+                    "data_fim": data_fim,
+                    "hora": event_time,
+                    "hora_fim": None,
+                    "localizacao": None,
+                    "recorrencia": None
+                }]
             }
 
         elif correct_intent == "completar_tarefa":

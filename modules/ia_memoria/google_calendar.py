@@ -67,7 +67,7 @@ def get_calendar_service(credentials_path):
         print(f"[Google Calendar] Failed to build service: {e}")
         return None
 
-def push_event_to_google(event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, service=None, db_path=None):
+def push_event_to_google(event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, data_fim=None, hora_fim=None, service=None, db_path=None):
     """Pushes a single local event to Google Calendar."""
     root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     credentials_path = os.path.join(root_dir, 'credentials.json')
@@ -82,26 +82,53 @@ def push_event_to_google(event_id, event_title, event_date, event_time, localiza
             if not service:
                 return None
                 
-        # Parse ISO date-time string
-        start_datetime = f"{event_date}T{event_time}:00"
-        
-        # Default duration: 1 hour
-        dt = datetime.strptime(start_datetime, "%Y-%m-%dT%H:%M:%S")
-        dt_end = dt + timedelta(hours=1)
-        end_datetime = dt_end.strftime("%Y-%m-%dT%H:%M:%S")
-        
-        event_body = {
-            'summary': event_title,
-            'description': 'Agendado automaticamente pelo assistente de IA do DashFamília',
-            'start': {
-                'dateTime': start_datetime,
-                'timeZone': 'America/Sao_Paulo',
-            },
-            'end': {
-                'dateTime': end_datetime,
-                'timeZone': 'America/Sao_Paulo',
-            },
-        }
+        if not data_fim:
+            data_fim = event_date
+            
+        if event_time == "00:00" and (not hora_fim or hora_fim == "00:00"):
+            # All-day event. Google's end date is exclusive, so we add 1 day to the local end date
+            try:
+                dt_end = datetime.strptime(data_fim, "%Y-%m-%d")
+                dt_excl = dt_end + timedelta(days=1)
+                exclusive_end_date = dt_excl.strftime("%Y-%m-%d")
+            except Exception:
+                exclusive_end_date = data_fim
+                
+            event_body = {
+                'summary': event_title,
+                'description': 'Agendado automaticamente pelo assistente de IA do DashFamília',
+                'start': {
+                    'date': event_date,
+                    'timeZone': 'America/Sao_Paulo',
+                },
+                'end': {
+                    'date': exclusive_end_date,
+                    'timeZone': 'America/Sao_Paulo',
+                },
+            }
+        else:
+            # Timed event
+            start_datetime = f"{event_date}T{event_time}:00"
+            if not hora_fim:
+                # Default duration: 1 hour
+                dt = datetime.strptime(start_datetime, "%Y-%m-%dT%H:%M:%S")
+                dt_end = dt + timedelta(hours=1)
+                end_datetime = dt_end.strftime("%Y-%m-%dT%H:%M:%S")
+            else:
+                end_datetime = f"{data_fim}T{hora_fim}:00"
+                
+            event_body = {
+                'summary': event_title,
+                'description': 'Agendado automaticamente pelo assistente de IA do DashFamília',
+                'start': {
+                    'dateTime': start_datetime,
+                    'timeZone': 'America/Sao_Paulo',
+                },
+                'end': {
+                    'dateTime': end_datetime,
+                    'timeZone': 'America/Sao_Paulo',
+                },
+            }
         
         if localizacao:
             event_body['location'] = localizacao
@@ -124,15 +151,15 @@ def push_event_to_google(event_id, event_title, event_date, event_time, localiza
         print(f"[Google Calendar] Error pushing event: {e}")
     return None
 
-def push_event_to_google_background(event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, db_path=None):
+def push_event_to_google_background(event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, data_fim=None, hora_fim=None, db_path=None):
     t = threading.Thread(
         target=push_event_to_google,
-        args=(event_id, event_title, event_date, event_time, localizacao, recorrencia, None, db_path)
+        args=(event_id, event_title, event_date, event_time, localizacao, recorrencia, data_fim, hora_fim, None, db_path)
     )
     t.daemon = True
     t.start()
 
-def update_event_in_google(google_event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, service=None):
+def update_event_in_google(google_event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, data_fim=None, hora_fim=None, service=None):
     """Updates an existing event in Google Calendar by its Google Event ID."""
     root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     credentials_path = os.path.join(root_dir, 'credentials.json')
@@ -147,26 +174,53 @@ def update_event_in_google(google_event_id, event_title, event_date, event_time,
             if not service:
                 return False
                 
-        # Parse ISO date-time string
-        start_datetime = f"{event_date}T{event_time}:00"
-        
-        # Default duration: 1 hour
-        dt = datetime.strptime(start_datetime, "%Y-%m-%dT%H:%M:%S")
-        dt_end = dt + timedelta(hours=1)
-        end_datetime = dt_end.strftime("%Y-%m-%dT%H:%M:%S")
-        
-        event_body = {
-            'summary': event_title,
-            'description': 'Agendado automaticamente pelo assistente de IA do DashFamília',
-            'start': {
-                'dateTime': start_datetime,
-                'timeZone': 'America/Sao_Paulo',
-            },
-            'end': {
-                'dateTime': end_datetime,
-                'timeZone': 'America/Sao_Paulo',
-            },
-        }
+        if not data_fim:
+            data_fim = event_date
+            
+        if event_time == "00:00" and (not hora_fim or hora_fim == "00:00"):
+            # All-day event. Google's end date is exclusive, so we add 1 day to the local end date
+            try:
+                dt_end = datetime.strptime(data_fim, "%Y-%m-%d")
+                dt_excl = dt_end + timedelta(days=1)
+                exclusive_end_date = dt_excl.strftime("%Y-%m-%d")
+            except Exception:
+                exclusive_end_date = data_fim
+                
+            event_body = {
+                'summary': event_title,
+                'description': 'Agendado automaticamente pelo assistente de IA do DashFamília',
+                'start': {
+                    'date': event_date,
+                    'timeZone': 'America/Sao_Paulo',
+                },
+                'end': {
+                    'date': exclusive_end_date,
+                    'timeZone': 'America/Sao_Paulo',
+                },
+            }
+        else:
+            # Timed event
+            start_datetime = f"{event_date}T{event_time}:00"
+            if not hora_fim:
+                # Default duration: 1 hour
+                dt = datetime.strptime(start_datetime, "%Y-%m-%dT%H:%M:%S")
+                dt_end = dt + timedelta(hours=1)
+                end_datetime = dt_end.strftime("%Y-%m-%dT%H:%M:%S")
+            else:
+                end_datetime = f"{data_fim}T{hora_fim}:00"
+                
+            event_body = {
+                'summary': event_title,
+                'description': 'Agendado automaticamente pelo assistente de IA do DashFamília',
+                'start': {
+                    'dateTime': start_datetime,
+                    'timeZone': 'America/Sao_Paulo',
+                },
+                'end': {
+                    'dateTime': end_datetime,
+                    'timeZone': 'America/Sao_Paulo',
+                },
+            }
         
         if localizacao:
             event_body['location'] = localizacao
@@ -187,11 +241,11 @@ def update_event_in_google(google_event_id, event_title, event_date, event_time,
         print(f"[Google Calendar] Error updating event: {e}")
         return False
 
-def update_event_in_google_background(google_event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None):
+def update_event_in_google_background(google_event_id, event_title, event_date, event_time, localizacao=None, recorrencia=None, data_fim=None, hora_fim=None):
     """Runs the Google Calendar update in a background thread."""
     t = threading.Thread(
         target=update_event_in_google,
-        args=(google_event_id, event_title, event_date, event_time, localizacao, recorrencia)
+        args=(google_event_id, event_title, event_date, event_time, localizacao, recorrencia, data_fim, hora_fim)
     )
     t.daemon = True
     t.start()
@@ -272,6 +326,7 @@ def sync_calendars(db_path=None):
                 g_id = push_event_to_google(
                     le['id'], le['titulo'], le['data'], le['hora'], 
                     localizacao=le.get('localizacao'), recorrencia=le.get('recorrencia'),
+                    data_fim=le.get('data_fim'), hora_fim=le.get('hora_fim'),
                     service=service, db_path=db_path
                 )
                 if g_id:
@@ -326,6 +381,28 @@ def sync_calendars(db_path=None):
                 event_date = start_date
                 event_time = "00:00"
                 
+            # Pull end date and time
+            end = g_event.get('end', {})
+            end_dt = end.get('dateTime')
+            end_date = end.get('date')
+            
+            event_data_fim = None
+            event_hora_fim = None
+            if end_dt:
+                parts_end = end_dt.split('T')
+                event_data_fim = parts_end[0]
+                time_part_end = parts_end[1]
+                event_hora_fim = time_part_end[:5]
+            elif end_date:
+                # Exclusive end date. Subtract 1 day to make it inclusive locally
+                try:
+                    dt_end = datetime.strptime(end_date, "%Y-%m-%d")
+                    dt_incl = dt_end - timedelta(days=1)
+                    event_data_fim = dt_incl.strftime("%Y-%m-%d")
+                except Exception:
+                    event_data_fim = end_date
+                event_hora_fim = "00:00"
+                
             g_loc = g_event.get('location')
             g_rec_list = g_event.get('recurrence')
             g_rec = g_rec_list[0] if g_rec_list else None
@@ -337,7 +414,9 @@ def sync_calendars(db_path=None):
                     local_ev['data'] != event_date or 
                     local_ev['hora'] != event_time or
                     local_ev.get('localizacao') != g_loc or
-                    local_ev.get('recorrencia') != g_rec):
+                    local_ev.get('recorrencia') != g_rec or
+                    local_ev.get('data_fim') != event_data_fim or
+                    local_ev.get('hora_fim') != event_hora_fim):
                     print(f"[Google Calendar] Updating local event ID {local_ev['id']} to match Google...")
                     update_event(
                         event_id=local_ev['id'],
@@ -349,6 +428,8 @@ def sync_calendars(db_path=None):
                         categoria=local_ev['categoria'],
                         localizacao=g_loc,
                         recorrencia=g_rec,
+                        data_fim=event_data_fim,
+                        hora_fim=event_hora_fim,
                         db_path=db_path
                     )
             else:
@@ -376,6 +457,8 @@ def sync_calendars(db_path=None):
                         categoria=matched_local['categoria'],
                         localizacao=g_loc,
                         recorrencia=g_rec,
+                        data_fim=event_data_fim,
+                        hora_fim=event_hora_fim,
                         db_path=db_path
                     )
                 else:
@@ -391,6 +474,8 @@ def sync_calendars(db_path=None):
                         google_event_id=g_id,
                         localizacao=g_loc,
                         recorrencia=g_rec,
+                        data_fim=event_data_fim,
+                        hora_fim=event_hora_fim,
                         db_path=db_path
                     )
                     

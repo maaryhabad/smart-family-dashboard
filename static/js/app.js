@@ -1465,7 +1465,12 @@ function renderCalendarGrid(year, month) {
         dayDiv.appendChild(dayNumSpan);
 
         // Check for events on this day and add color dots (excluding tasks)
-        const dayEvents = calendarEvents.filter(e => !e.is_task && e.date === dayString);
+        const dayEvents = calendarEvents.filter(e => {
+            if (e.is_task) return false;
+            const start = e.date;
+            const end = e.data_fim || e.date;
+            return dayString >= start && dayString <= end;
+        });
         if (dayEvents.length > 0) {
             const dotsContainer = document.createElement('div');
             dotsContainer.className = 'day-events-dots';
@@ -1514,7 +1519,9 @@ function renderEventsList() {
         // Filter regular events (not tasks) within next 8 days [todayStr, maxDateStr]
         const filteredEvents = calendarEvents.filter(evt => {
             if (evt.is_task) return false;
-            return evt.date >= todayStr && evt.date <= maxDateStr;
+            const start = evt.date;
+            const end = evt.data_fim || evt.date;
+            return start <= maxDateStr && end >= todayStr;
         });
 
         // Sort by date then time
@@ -1544,7 +1551,11 @@ function renderEventsList() {
                 card.style.borderLeft = `4px solid ${evt.color}`;
 
                 const dateParts = evt.date.split('-');
-                const dateFormatted = `${dateParts[2]}/${dateParts[1]}`;
+                let dateFormatted = `${dateParts[2]}/${dateParts[1]}`;
+                if (evt.data_fim && evt.data_fim !== evt.date) {
+                    const endParts = evt.data_fim.split('-');
+                    dateFormatted += ` a ${endParts[2]}/${endParts[1]}`;
+                }
 
                 let metaHtml = `
                     <span>🕒 ${evt.time}</span>
