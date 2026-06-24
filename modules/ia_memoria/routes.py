@@ -359,6 +359,21 @@ def parse_intent_locally(message):
                     user = 'Mari'
             return 'completar_tarefa', {'usuario': user, 'tarefa': task_kw or msg}
             
+    # 1.5. Listar recompensas resgatadas
+    list_redeemed_keywords = ['quais', 'listar', 'ver', 'mostrar', 'histórico', 'historico', 'resgatadas', 'resgatou', 'comprou', 'compradas', 'pendentes', 'recebeu', 'entregues', 'entrega']
+    is_list_redeemed = any(kw in msg for kw in ['recompensa', 'resgate', 'loja', 'item', 'itens']) and any(kw in msg for kw in list_redeemed_keywords)
+    if not is_list_redeemed:
+        is_list_redeemed = any(kw in msg for kw in ['resgatou', 'resgatadas'])
+    if is_list_redeemed:
+        user = None
+        if 'isa' in msg:
+            user = 'Isa'
+        elif 'cassi' in msg:
+            user = 'Cassi'
+        elif 'mari' in msg:
+            user = 'Mari'
+        return 'listar_recompensas_resgatadas', {'usuario': user}
+
     # 2. Resgatar recompensa
     redeem_keywords = ['resgatar', 'resgate', 'comprar', 'recompensa', 'reivindicar', 'quero resgatar', 'quero comprar']
     is_redeem = any(kw in msg for kw in redeem_keywords)
@@ -839,6 +854,24 @@ def ia_chat():
                         reply_text = f"⚠️ **Não foi possível resgatar:** {msg_redeem}"
                 else:
                     reply_text = f"🤖 Não encontrei nenhuma recompensa pendente correspondente a '{reward_search}'. Verifique a Loja de Recompensas!"
+                is_ollama_parsed = True
+            elif intent == "listar_recompensas_resgatadas":
+                user_param = detalhes.get("usuario")
+                
+                all_rewards = get_all_rewards()
+                redeemed_rewards = [r for r in all_rewards if r['resgatado'] == 1]
+                
+                if user_param:
+                    redeemed_rewards = [r for r in redeemed_rewards if r['usuario_nome'].lower() == user_param.lower()]
+                    
+                if not redeemed_rewards:
+                    user_desc = f" para {user_param}" if user_param else ""
+                    reply_text = f"🎁 Não há nenhuma recompensa resgatada pendente de recebimento{user_desc}."
+                else:
+                    user_desc = f" de {user_param}" if user_param else ""
+                    reply_text = f"🛒 **Recompensas Resgatadas (Pendentes de Entrega){user_desc}:**<br><br>"
+                    for r in redeemed_rewards:
+                        reply_text += f"• **{r['usuario_nome']}**: {r['icone']} {r['titulo']} - *Custo: 🪙 {r['custo']} Ouro*<br>"
                 is_ollama_parsed = True
             elif intent == "listar_tarefas":
                 user_param = detalhes.get("usuario")
@@ -2153,6 +2186,17 @@ def feedback_retrain():
             }
 
         elif correct_intent == "listar_tarefas":
+            import re
+            user_param = None
+            for u in ['Cassi', 'Isa', 'Mari']:
+                if re.search(r'\b' + re.escape(u) + r'\b', details, re.IGNORECASE):
+                    user_param = u
+                    break
+            assistant_payload["detalhes"] = {
+                "usuario": user_param
+            }
+
+        elif correct_intent == "listar_recompensas_resgatadas":
             import re
             user_param = None
             for u in ['Cassi', 'Isa', 'Mari']:

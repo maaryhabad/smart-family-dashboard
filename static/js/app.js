@@ -1061,6 +1061,10 @@ function openFeedbackModal(userMsg) {
             detailsLabel.textContent = "Nome da receita:";
             detailsInput.placeholder = "Ex: Bolo de cenoura";
             document.getElementById('feedback-items-group').style.display = 'block';
+        } else if (intent === 'listar_tarefas' || intent === 'listar_recompensas_resgatadas') {
+            detailsLabel.textContent = "Membro da família (Opcional):";
+            detailsInput.placeholder = "Ex: Isa, Cassi, Mari";
+            document.getElementById('feedback-items-group').style.display = 'block';
         } else if (intent === 'adicionar_transacao') {
             detailsLabel.textContent = "Despesa ou Receita (Descrição, valor e categoria):";
             detailsInput.placeholder = "Ex: despesa de 150 no Carrefour ou receita de 1200";

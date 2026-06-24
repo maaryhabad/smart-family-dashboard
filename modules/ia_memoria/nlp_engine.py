@@ -337,6 +337,8 @@ def parse_intent_with_ollama(message):
         "{\"intencao\": \"deletar_receita\", \"detalhes\": {\"receita\": \"<nome da receita>\"}}\n"
         "15. Para comprar os ingredientes de uma receita:\n"
         "{\"intencao\": \"comprar_receita\", \"detalhes\": {\"receita\": \"<nome da receita>\"}}\n"
+        "16. Para listar ou ver as recompensas resgatadas por um usuário que ele ainda não recebeu/recebeu:\n"
+        "{\"intencao\": \"listar_recompensas_resgatadas\", \"detalhes\": {\"usuario\": \"<nome ou null para todos>\"}}\n"
     )
     
     payload = {

@@ -33,7 +33,9 @@ Formatos JSON por intenção:
 11. Para comprar ou resgatar uma recompensa da loja:
 {"intencao": "resgatar_recompensa", "detalhes": {"usuario": "<nome>", "recompensa": "<nome/termo da recompensa>"}}
 12. Para listar ou ver as tarefas do dia/semana:
-{"intencao": "listar_tarefas", "detalhes": {"usuario": "<nome ou null para todos>"}}"""
+{"intencao": "listar_tarefas", "detalhes": {"usuario": "<nome ou null para todos>"}}
+13. Para listar ou ver as recompensas resgatadas por um usuário que ele ainda não recebeu/recebeu:
+{"intencao": "listar_recompensas_resgatadas", "detalhes": {"usuario": "<nome ou null para todos>"}}"""
 
 # Few-shot prompt examples for the chatbot role
 MESSAGE user "salva que a senha do wifi é FamiliaFeliz2026!"
@@ -92,3 +94,9 @@ MESSAGE assistant "{\"intencao\": \"listar_tarefas\", \"detalhes\": {\"usuario\"
 
 MESSAGE user "o que a Isa tem pra fazer hoje?"
 MESSAGE assistant "{\"intencao\": \"listar_tarefas\", \"detalhes\": {\"usuario\": \"Isa\"}}"
+
+MESSAGE user "quais as recompensas que a Isa resgatou?"
+MESSAGE assistant "{\"intencao\": \"listar_recompensas_resgatadas\", \"detalhes\": {\"usuario\": \"Isa\"}}"
+
+MESSAGE user "quais recompensas foram resgatadas e ainda não foram entregues?"
+MESSAGE assistant "{\"intencao\": \"listar_recompensas_resgatadas\", \"detalhes\": {\"usuario\": null}}"

@@ -1072,6 +1072,14 @@ class TestGamifiedTasks(unittest.TestCase):
         self.assertEqual(intent4, "listar_tarefas")
         self.assertEqual(details4['usuario'], "Cassi")
 
+        intent_rewards, details_rewards = parse_intent_locally("quais as recompensas que a Isa resgatou?")
+        self.assertEqual(intent_rewards, "listar_recompensas_resgatadas")
+        self.assertEqual(details_rewards['usuario'], "Isa")
+
+        intent_rewards2, details_rewards2 = parse_intent_locally("recompensas que o Cassi comprou")
+        self.assertEqual(intent_rewards2, "listar_recompensas_resgatadas")
+        self.assertEqual(details_rewards2['usuario'], "Cassi")
+
 
 class TestDeletedEventsQueue(unittest.TestCase):
     def setUp(self):
@@ -1494,6 +1502,32 @@ class TestTaskManagement(unittest.TestCase):
         # Verify it is deleted from database
         rewards_final = get_all_rewards(TEST_DB_PATH)
         self.assertFalse(any(r['id'] == reward_id for r in rewards_final))
+
+    def test_chat_listar_recompensas_resgatadas(self):
+        from modules.ia_memoria.database import get_rewards_for_user, redeem_reward_in_db
+        import sqlite3
+        
+        # Give Isa enough gold first
+        conn = sqlite3.connect(TEST_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE usuarios SET gold = 50 WHERE nome = 'Isa'")
+        conn.commit()
+        conn.close()
+        
+        # Redeem a reward for Isa
+        isa_rewards = get_rewards_for_user('Isa', TEST_DB_PATH)
+        reward = isa_rewards[0]
+        success, msg, user_profile = redeem_reward_in_db(reward['id'], TEST_DB_PATH)
+        self.assertTrue(success)
+        
+        # Send a message to chat
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "quais as recompensas que a Isa resgatou?"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("Recompensas Resgatadas (Pendentes de Entrega)", data["reply"])
+        self.assertIn(reward['titulo'], data["reply"])
 
 
 if __name__ == '__main__':
