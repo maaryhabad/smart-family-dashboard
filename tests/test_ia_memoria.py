@@ -558,7 +558,7 @@ class TestOllamaIntegration(unittest.TestCase):
         except PermissionError:
             pass
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_save(self, mock_ollama):
         mock_ollama.return_value = (True, {
             "intencao": "salvar",
@@ -578,7 +578,7 @@ class TestOllamaIntegration(unittest.TestCase):
         memories = get_all_memories(TEST_DB_PATH)
         self.assertTrue(any("9876" in m["conteudo"] for m in memories))
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_buscar(self, mock_ollama):
         save_memory("Senhas", "wifi", "A senha do wifi é abc123", TEST_DB_PATH)
         
@@ -597,7 +597,7 @@ class TestOllamaIntegration(unittest.TestCase):
         self.assertIn("Encontrei esta informação", data["reply"])
         self.assertIn("abc123", data["reply"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_adicionar_lista(self, mock_ollama):
         mock_ollama.return_value = (True, {
             "intencao": "adicionar_lista",
@@ -615,7 +615,7 @@ class TestOllamaIntegration(unittest.TestCase):
         self.assertIn("Leite", data["reply"])
         self.assertIn("Manteiga", data["reply"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_remover_lista(self, mock_ollama):
         save_memory("Mercado", "lista compras mercado", "A lista de compras do mercado é: Pão, Leite e Manteiga.", TEST_DB_PATH)
         
@@ -638,7 +638,7 @@ class TestOllamaIntegration(unittest.TestCase):
         self.assertNotIn("Leite", m_list["conteudo"])
         self.assertIn("Manteiga", m_list["conteudo"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_composto_lista(self, mock_ollama):
         save_memory("Mercado", "lista compras mercado", "A lista de compras do mercado é: Pão, Leite e Manteiga.", TEST_DB_PATH)
         
@@ -664,7 +664,7 @@ class TestOllamaIntegration(unittest.TestCase):
         self.assertNotIn("Leite", m_list["conteudo"])
         self.assertNotIn("Pão", m_list["conteudo"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_limpar_lista(self, mock_ollama):
         save_memory("Mercado", "lista compras mercado", "A lista de compras do mercado é: Pão, Leite.", TEST_DB_PATH)
         
@@ -685,7 +685,7 @@ class TestOllamaIntegration(unittest.TestCase):
         memories = get_all_memories(TEST_DB_PATH)
         self.assertFalse(any(m["categoria"] == "Mercado" for m in memories))
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_conversa(self, mock_ollama):
         mock_ollama.return_value = (True, {
             "intencao": "conversa",
@@ -699,7 +699,7 @@ class TestOllamaIntegration(unittest.TestCase):
         data = response.get_json()
         self.assertIn("Sou o assistente virtual", data["reply"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_agendar_calendario(self, mock_ollama):
         mock_ollama.return_value = (True, {
             "intencao": "agendar_calendario",
@@ -723,7 +723,7 @@ class TestOllamaIntegration(unittest.TestCase):
         events = get_all_events(TEST_DB_PATH)
         self.assertTrue(any(e["titulo"] == "Festa junina na empresa do Cassi" for e in events))
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_offline_response(self, mock_ollama):
         mock_ollama.return_value = (False, None)
         
@@ -763,7 +763,7 @@ class TestOllamaIntegration(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIsNone(res)
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_agendar_calendario_multi(self, mock_ollama):
         mock_ollama.return_value = (True, {
             "intencao": "agendar_calendario",

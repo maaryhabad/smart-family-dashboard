@@ -2134,7 +2134,8 @@ function updateGamerUI() {
 
             const actionHtml = quest.completed
                 ? `<span class="quest-status-checked">⭐ Concluída</span>`
-                : `<button class="btn-complete" onclick="completeQuest(${quest.id})">Concluir</button>`;
+                : `<button class="btn-complete" onclick="completeQuest(${quest.id})">Concluir</button>
+                   <button class="btn-complete skip-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; color: #ff7675;" onclick="completeQuest(${quest.id}, true)">Pular</button>`;
 
             const isOverdue = quest.data < todayStr && !quest.completed;
             const overdueBadge = isOverdue ? '<span class="tag-difficulty" style="background-color: rgba(235, 94, 40, 0.15); color: #ff7675; border-color: rgba(235, 94, 40, 0.25);">⚠️ Acumulada</span>' : '';
@@ -2301,12 +2302,12 @@ window.completeReward = async function(rewardId) {
 };
 
 // Global scope handlers for onClick attributes in generated HTML
-window.completeQuest = async function (questId) {
+window.completeQuest = async function (questId, skip = false) {
     try {
         const res = await fetch('/api/todo-gamer/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quest_id: questId })
+            body: JSON.stringify({ quest_id: questId, skip: skip })
         });
         const data = await res.json();
 
@@ -2319,8 +2320,12 @@ window.completeQuest = async function (questId) {
         updateGamerUI();
         fetchCalendarData(); // Refresh calendar checks
 
-        // Show success rewards toast
-        showToast(`Quest Concluída! Ganhou +${data.reward_xp} XP e +${data.reward_gold} Ouro! ⚔️`, "success");
+        if (skip) {
+            showToast("Quest marcada como concluída/pulada (sem ganhar ouro/XP). 🕒", "info");
+        } else {
+            // Show success rewards toast
+            showToast(`Quest Concluída! Ganhou +${data.reward_xp} XP e +${data.reward_gold} Ouro! ⚔️`, "success");
+        }
 
         // Find if user leveled up
         const activeChar = gamerState.profiles.find(p => p.nome.toLowerCase() === activeGamerMember.toLowerCase());

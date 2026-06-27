@@ -331,7 +331,8 @@ def delete_event_route():
 
 @app.route('/api/todo-gamer')
 def get_todo_gamer():
-    from modules.ia_memoria.database import get_all_users, get_all_tasks, get_all_rewards
+    from modules.ia_memoria.database import get_all_users, get_all_tasks, get_all_rewards, consolidate_tasks_db
+    consolidate_tasks_db()
     users = get_all_users()
     tasks = get_all_tasks()
     rewards = get_all_rewards()
@@ -346,6 +347,7 @@ def get_todo_gamer():
 def complete_quest():
     data = request.json or {}
     quest_id = data.get("quest_id")
+    skip = data.get("skip", False)
     if not quest_id:
         return jsonify({"error": "ID da missão não fornecido."}), 400
         
@@ -357,7 +359,7 @@ def complete_quest():
     if not quest:
         return jsonify({"error": "Missão não encontrada."}), 404
         
-    success, user_profile, leveled_up = complete_task_in_db(quest_id)
+    success, user_profile, leveled_up = complete_task_in_db(quest_id, skip=skip)
     if not success:
         return jsonify({"error": "Missão já concluída anteriormente."}), 400
         
@@ -365,11 +367,14 @@ def complete_quest():
     tasks = get_all_tasks()
     rewards = get_all_rewards()
     
+    reward_xp = 0 if skip else quest["reward_xp"]
+    reward_gold = 0 if skip else quest["reward_gold"]
+    
     return jsonify({
-        "message": "Missão concluída com sucesso! Recompensas creditadas.",
+        "message": "Missão marcada como concluída/pulada." if skip else "Missão concluída com sucesso! Recompensas creditadas.",
         "leveled_up": leveled_up,
-        "reward_xp": quest["reward_xp"],
-        "reward_gold": quest["reward_gold"],
+        "reward_xp": reward_xp,
+        "reward_gold": reward_gold,
         "state": {
             "character": users[0] if users else {},
             "profiles": users,
