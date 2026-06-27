@@ -307,6 +307,25 @@ class TestTaskAgent(TestAgentsBase):
         # Verify summed gold: today's 1 Gold + past's 3 Gold = 4 Gold
         self.assertEqual(mari_tasks[0]['reward_gold'], 4)
 
+    def test_save_user_success(self):
+        from modules.ia_memoria.database import save_user, get_all_users
+        success, msg = save_user("Rodrigo", "🛡️", "Guerreiro", 35, "(11) 99999-8888", TEST_DB_PATH)
+        self.assertTrue(success)
+        self.assertEqual(msg, "Usuário cadastrado com sucesso!")
+        
+        users = get_all_users(TEST_DB_PATH)
+        rodrigo = next((u for u in users if u['nome'] == 'Rodrigo'), None)
+        self.assertIsNotNone(rodrigo)
+        self.assertEqual(rodrigo['avatar'], "🛡️")
+        self.assertEqual(rodrigo['classe'], "Guerreiro")
+        self.assertEqual(rodrigo['idade'], 35)
+        self.assertEqual(rodrigo['telefone'], "(11) 99999-8888")
+        
+        # Test duplicate
+        success2, msg2 = save_user("Rodrigo", "🛡️", "Guerreiro", 35, "(11) 99999-8888", TEST_DB_PATH)
+        self.assertFalse(success2)
+        self.assertIn("já existe", msg2)
+
 
 class TestFinanceAgent(TestAgentsBase):
     def test_finance_agent_adicionar_transacao(self):

@@ -106,11 +106,71 @@ Acesse o painel no seu navegador através de: **`http://127.0.0.1:5000/`**
 
 ---
 
+## 🏛️ Arquitetura Modular do Projeto
+
+Para garantir manutenibilidade e escalabilidade à medida que novas features são adicionadas, o dashboard foi totalmente refatorado de uma estrutura monolítica para uma arquitetura baseada em **Flask Blueprints** divididos por domínios sob a pasta `modules/`:
+
+- **`app.py`**: Ponto de entrada limpo da aplicação. Inicializa o banco de dados SQLite local e registra todas as rotas modulares.
+- **`modules/geral/routes.py`**: Controla o carregamento do template principal (`index.html`) e o status do sistema de armazenamento (NAS).
+- **`modules/todo_gamer/routes.py`**: Centraliza todas as rotas de gamificação das rotinas diárias, missões, resgate e criação de recompensas, além do cadastro de novos membros.
+- **`modules/calendario/routes.py`**: Gerencia a criação e sincronização bidirecional de compromissos com o Google Calendar.
+- **`modules/financas/routes.py`**: Processa as transações de receitas, despesas parceladas/recorrentes, divisão de gastos e metas de poupança.
+- **`modules/ia_memoria/`**: Mantém a lógica NLP do "Cérebro da Casa" (TF-IDF local + fallback), as definições dos sub-agentes inteligentes especialistas e o `Orchestrator` de intents.
+
+---
+
+## 👥 Walkthrough/Tutorial: Cadastro de Membros da Família
+
+Agora é possível cadastrar novos jogadores na família, com campos opcionais para **idade** e **telefone**. A adição de novos membros pode ser realizada de duas formas:
+
+### 1. Via Interface Gráfica (Painel)
+1. Acesse o painel e selecione a aba **To-Do List Gamer**.
+2. Clique no botão **➕ Novo Jogador** (localizado ao lado das abas de seleção de membros).
+3. Preencha as informações no modal:
+   - **Nome ou Apelido**: Nome do jogador (ex: `Rodrigo`).
+   - **Avatar (Emoji)**: Ícone representativo (ex: `🛡️`).
+   - **Classe RPG**: Classe do personagem para a gamificação (ex: `Guerreiro`).
+   - **Idade** *(Opcional)*: Número inteiro de anos.
+   - **Telefone** *(Opcional)*: Contato rápido no formato que preferir.
+4. Clique em **Cadastrar**. O novo jogador será inserido no banco de dados SQLite local e seu selector tab correspondente aparecerá dinamicamente na lista!
+
+### 2. Via Chamada de API (cURL / Backend Client)
+Você pode enviar uma requisição HTTP do tipo `POST` para o endpoint `/api/todo-gamer/usuario/cadastrar`.
+
+**Exemplo de Requisição cURL:**
+```bash
+curl -X POST http://127.0.0.1:5000/api/todo-gamer/usuario/cadastrar \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "Rodrigo",
+    "avatar": "🛡️",
+    "classe": "Guerreiro",
+    "idade": 35,
+    "telefone": "(11) 99999-8888"
+  }'
+```
+
+**Exemplo de Resposta de Sucesso (JSON):**
+```json
+{
+  "success": true,
+  "message": "Usuário cadastrado com sucesso!",
+  "profiles": [
+    { "id": 1, "nome": "Mari", "avatar": "👩‍💻", "classe": "Guardiã da Organização", "nivel": 1, "xp": 0, "xp_to_next_level": 100, "gold": 0, "idade": null, "telefone": null },
+    { "id": 2, "nome": "Cassi", "avatar": "👨‍💻", "classe": "Guerreiro da Limpeza", "nivel": 1, "xp": 0, "xp_to_next_level": 100, "gold": 0, "idade": null, "telefone": null },
+    { "id": 3, "nome": "Isa", "avatar": "👧", "classe": "Pequena Aprendiz", "nivel": 1, "xp": 0, "xp_to_next_level": 100, "gold": 0, "idade": null, "telefone": null },
+    { "id": 4, "nome": "Rodrigo", "avatar": "🛡️", "classe": "Guerreiro", "nivel": 1, "xp": 0, "xp_to_next_level": 100, "gold": 0, "idade": 35, "telefone": "(11) 99999-8888" }
+  ]
+}
+```
+
+---
+
 ## 🧪 Rodando os Testes Unitários
 
 O projeto possui uma suíte completa de testes para validar o comportamento do banco de dados, NLP e fluxos de feedback:
 ```bash
-python -m unittest tests/test_ia_memoria.py
+.venv\Scripts\python.exe -m unittest discover -s tests
 ```
 
 ---

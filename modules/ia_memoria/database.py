@@ -97,9 +97,19 @@ def init_db(db_path=None):
                 nivel INTEGER DEFAULT 1,
                 xp INTEGER DEFAULT 0,
                 xp_to_next_level INTEGER DEFAULT 100,
-                gold INTEGER DEFAULT 0
+                gold INTEGER DEFAULT 0,
+                idade INTEGER,
+                telefone TEXT
             )
         ''')
+        
+        # Check if age and phone columns exist in usuarios table, add if not
+        cursor.execute("PRAGMA table_info(usuarios)")
+        user_columns = [row[1] for row in cursor.fetchall()]
+        if 'idade' not in user_columns:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN idade INTEGER")
+        if 'telefone' not in user_columns:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN telefone TEXT")
         
         # Create table tarefas
         cursor.execute('''
@@ -602,7 +612,7 @@ def get_all_users(db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold FROM usuarios")
+    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold, idade, telefone FROM usuarios")
     rows = cursor.fetchall()
     users = [dict(row) for row in rows]
     conn.close()
@@ -612,7 +622,7 @@ def get_user_by_name(nome, db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold FROM usuarios WHERE LOWER(nome) = ?", (nome.lower(),))
+    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold, idade, telefone FROM usuarios WHERE LOWER(nome) = ?", (nome.lower(),))
     row = cursor.fetchone()
     user = dict(row) if row else None
     conn.close()
@@ -628,6 +638,26 @@ def update_user_stats(nome, xp, gold, nivel, xp_to_next_level, db_path=None):
     )
     conn.commit()
     conn.close()
+
+def save_user(nome, avatar, classe, idade=None, telefone=None, db_path=None):
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    
+    # Check if user already exists
+    cursor.execute("SELECT id FROM usuarios WHERE LOWER(nome) = ?", (nome.lower(),))
+    exists = cursor.fetchone()
+    if exists:
+        conn.close()
+        return False, "Usuário com este nome/apelido já existe."
+        
+    cursor.execute('''
+        INSERT INTO usuarios (nome, avatar, classe, nivel, xp, xp_to_next_level, gold, idade, telefone)
+        VALUES (?, ?, ?, 1, 0, 100, 0, ?, ?)
+    ''', (nome, avatar, classe, idade, telefone))
+    conn.commit()
+    conn.close()
+    return True, "Usuário cadastrado com sucesso!"
 
 def consolidate_tasks_db(db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
