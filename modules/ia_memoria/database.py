@@ -97,9 +97,19 @@ def init_db(db_path=None):
                 nivel INTEGER DEFAULT 1,
                 xp INTEGER DEFAULT 0,
                 xp_to_next_level INTEGER DEFAULT 100,
-                gold INTEGER DEFAULT 0
+                gold INTEGER DEFAULT 0,
+                idade INTEGER,
+                telefone TEXT
             )
         ''')
+        
+        # Check if age and phone columns exist in usuarios table, add if not
+        cursor.execute("PRAGMA table_info(usuarios)")
+        user_columns = [row[1] for row in cursor.fetchall()]
+        if 'idade' not in user_columns:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN idade INTEGER")
+        if 'telefone' not in user_columns:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN telefone TEXT")
         
         # Create table tarefas
         cursor.execute('''
@@ -602,7 +612,7 @@ def get_all_users(db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold FROM usuarios")
+    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold, idade, telefone FROM usuarios")
     rows = cursor.fetchall()
     users = [dict(row) for row in rows]
     conn.close()
@@ -612,7 +622,7 @@ def get_user_by_name(nome, db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold FROM usuarios WHERE LOWER(nome) = ?", (nome.lower(),))
+    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold, idade, telefone FROM usuarios WHERE LOWER(nome) = ?", (nome.lower(),))
     row = cursor.fetchone()
     user = dict(row) if row else None
     conn.close()
@@ -626,6 +636,118 @@ def update_user_stats(nome, xp, gold, nivel, xp_to_next_level, db_path=None):
         "UPDATE usuarios SET xp = ?, gold = ?, nivel = ?, xp_to_next_level = ? WHERE LOWER(nome) = ?",
         (xp, gold, nivel, xp_to_next_level, nome.lower())
     )
+    conn.commit()
+    conn.close()
+
+def save_user(nome, avatar, classe, idade=None, telefone=None, db_path=None):
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    
+    # Check if user already exists
+    cursor.execute("SELECT id FROM usuarios WHERE LOWER(nome) = ?", (nome.lower(),))
+    exists = cursor.fetchone()
+    if exists:
+        conn.close()
+        return False, "Usuário com este nome/apelido já existe."
+        
+    cursor.execute('''
+        INSERT INTO usuarios (nome, avatar, classe, nivel, xp, xp_to_next_level, gold, idade, telefone)
+        VALUES (?, ?, ?, 1, 0, 100, 0, ?, ?)
+    ''', (nome, avatar, classe, idade, telefone))
+    conn.commit()
+    conn.close()
+    return True, "Usuário cadastrado com sucesso!"
+
+def consolidate_tasks_db(db_path=None):
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    
+    import datetime
+    today = datetime.date.today()
+    today_str = today.strftime('%Y-%m-%d')
+    
+    # Fetch all uncompleted past tasks (data < today and completed = 0)
+    cursor.execute(
+        "SELECT id, usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, data, hora, evento_calendario_id FROM tarefas WHERE data < ? AND completed = 0",
+        (today_str,)
+    )
+    rows = cursor.fetchall()
+    past_tasks = [dict(row) for row in rows]
+    
+    if not past_tasks:
+        conn.close()
+        return
+        
+    # Group past tasks by (usuario_nome.lower(), titulo.lower())
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for t in past_tasks:
+        key = (t['usuario_nome'].lower(), t['titulo'].lower())
+        groups[key].append(t)
+        
+    for key, task_list in groups.items():
+        user_name = task_list[0]['usuario_nome']
+        title = task_list[0]['titulo']
+        
+        # Calculate total accumulated points of all past tasks in this group
+        total_xp = 0
+        total_gold = 0
+        for pt in task_list:
+            base_xp = pt['reward_xp']
+            base_gold = pt['reward_gold']
+            try:
+                task_date = datetime.datetime.strptime(pt['data'], '%Y-%m-%d').date()
+                days_overdue = (today - task_date).days
+                if days_overdue > 0:
+                    base_xp += days_overdue * 2
+                    base_gold += days_overdue * 1
+            except Exception:
+                pass
+            total_xp += base_xp
+            total_gold += base_gold
+            
+        # Check if there is an uncompleted task for today with the same user and title
+        cursor.execute(
+            "SELECT id, reward_xp, reward_gold, evento_calendario_id FROM tarefas WHERE LOWER(usuario_nome) = ? AND LOWER(titulo) = ? AND data = ? AND completed = 0",
+            (user_name.lower(), title.lower(), today_str)
+        )
+        today_row = cursor.fetchone()
+        
+        if today_row:
+            # We add the past tasks' points to today's task
+            new_xp = today_row['reward_xp'] + total_xp
+            new_gold = today_row['reward_gold'] + total_gold
+            cursor.execute(
+                "UPDATE tarefas SET reward_xp = ?, reward_gold = ? WHERE id = ?",
+                (new_xp, new_gold, today_row['id'])
+            )
+            # Delete all past tasks in the group and their associated calendar events
+            for pt in task_list:
+                cursor.execute("DELETE FROM tarefas WHERE id = ?", (pt['id'],))
+                if pt['evento_calendario_id']:
+                    cursor.execute("DELETE FROM eventos WHERE id = ?", (pt['evento_calendario_id'],))
+        else:
+            # No today's task exists. We update one of the past tasks to be today's task, and sum all points into it
+            target_pt = task_list[-1]
+            cursor.execute(
+                "UPDATE tarefas SET data = ?, reward_xp = ?, reward_gold = ? WHERE id = ?",
+                (today_str, total_xp, total_gold, target_pt['id'])
+            )
+            # Also update its associated calendar event's date to today
+            if target_pt['evento_calendario_id']:
+                cursor.execute(
+                    "UPDATE eventos SET data = ?, data_fim = ? WHERE id = ?",
+                    (today_str, today_str, target_pt['evento_calendario_id'])
+                )
+            
+            # Delete all other past tasks in the group and their calendar events
+            for pt in task_list[:-1]:
+                cursor.execute("DELETE FROM tarefas WHERE id = ?", (pt['id'],))
+                if pt['evento_calendario_id']:
+                    cursor.execute("DELETE FROM eventos WHERE id = ?", (pt['evento_calendario_id'],))
+                    
     conn.commit()
     conn.close()
 
@@ -646,6 +768,7 @@ def get_tasks_for_user(usuario_nome, db_path=None):
         if not t['completed']:
             try:
                 task_date = datetime.datetime.strptime(t['data'], '%Y-%m-%d').date()
+                today = datetime.date.today()
                 days_overdue = (today - task_date).days
                 if days_overdue > 0:
                     t['reward_xp'] += days_overdue * 2
@@ -715,7 +838,7 @@ def save_task(usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_go
     conn.close()
     return task_id
 
-def complete_task_in_db(task_id, db_path=None):
+def complete_task_in_db(task_id, db_path=None, skip=False):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
     cursor = conn.cursor()
@@ -737,8 +860,24 @@ def complete_task_in_db(task_id, db_path=None):
     cursor.execute("UPDATE tarefas SET completed = 1 WHERE id = ?", (task_id,))
     conn.commit()
     
-    # Fetch user to update stats
     user_nome = task['usuario_nome']
+    
+    if skip:
+        # Update calendar event with checkmark
+        g_id = task['evento_calendario_id']
+        if g_id:
+            cursor.execute("SELECT titulo FROM eventos WHERE id = ?", (g_id,))
+            event = cursor.fetchone()
+            if event:
+                curr_title = event['titulo']
+                if not curr_title.startswith('✅'):
+                    new_title = f"✅ {curr_title}"
+                    cursor.execute("UPDATE eventos SET titulo = ? WHERE id = ?", (new_title, g_id))
+                    conn.commit()
+        conn.close()
+        return True, get_user_by_name(user_nome, target_path), False
+        
+    # Fetch user to update stats
     cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold FROM usuarios WHERE LOWER(nome) = ?", (user_nome.lower(),))
     user_row = cursor.fetchone()
     if not user_row:

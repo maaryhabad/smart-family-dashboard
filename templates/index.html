@@ -372,16 +372,12 @@
                 <section class="tab-content" id="tab-todo-gamer">
                     <div class="gamer-layout">
                         <!-- User Selector Tabs -->
-                        <div class="gamer-tabs-row"
-                            style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center; flex-wrap: wrap;">
-                            <button class="gamer-tab active" data-member="Mari">
-                                👩‍💻 Mariana
-                            </button>
-                            <button class="gamer-tab" data-member="Cassi">
-                                👨‍💻 Cassi
-                            </button>
-                            <button class="gamer-tab" data-member="Isa">
-                                👧 Isa
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+                            <div class="gamer-tabs-row" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                                <!-- Injected dynamically via JavaScript -->
+                            </div>
+                            <button class="btn btn-primary" id="btn-add-member" style="background:#1dd1a1; color:black; font-weight:bold; padding: 6px 12px; border-radius: 8px; border:none; cursor:pointer; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;">
+                                ➕ Novo Jogador
                             </button>
                         </div>
 
@@ -1106,6 +1102,53 @@
                         <button type="submit" class="btn btn-primary" id="btn-save-quest-modal"
                             style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Salvar
                             Missão</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Cadastrar Membro -->
+    <div class="modal-overlay" id="member-modal">
+        <div class="modal-content glass-panel" style="max-width: 400px; width: 90%;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.15); padding-bottom:10px; margin-bottom:20px;">
+                <h3 style="margin:0; color:white;">👥 Novo Jogador</h3>
+                <span class="close-modal" id="btn-close-member-modal" style="cursor:pointer; font-size:1.5rem; color:white;">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="member-form" onsubmit="event.preventDefault(); submitMemberForm();">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="member-name-input" style="display:block; margin-bottom:5px; font-weight:500; color:white;">Nome ou Apelido *</label>
+                        <input type="text" id="member-name-input" required placeholder="Ex: Rodrigo"
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                    </div>
+                    <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="member-avatar-input" style="display:block; margin-bottom:5px; font-weight:500; color:white;">Avatar (Emoji)</label>
+                            <input type="text" id="member-avatar-input" value="👤" placeholder="Ex: 🛡️"
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label for="member-class-input" style="display:block; margin-bottom:5px; font-weight:500; color:white;">Classe RPG</label>
+                            <input type="text" id="member-class-input" value="Aventureiro" placeholder="Ex: Guardião"
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                    </div>
+                    <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="member-age-input" style="display:block; margin-bottom:5px; font-weight:500; color:white;">Idade</label>
+                            <input type="number" id="member-age-input" placeholder="Ex: 35"
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label for="member-phone-input" style="display:block; margin-bottom:5px; font-weight:500; color:white;">Telefone (Opcional)</label>
+                            <input type="text" id="member-phone-input" placeholder="Ex: (11) 99999-8888"
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="margin-top:25px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-member-modal" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#1dd1a1; color:black; font-weight:bold;">Cadastrar</button>
                     </div>
                 </form>
             </div>

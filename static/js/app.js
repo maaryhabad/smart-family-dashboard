@@ -1896,16 +1896,25 @@ function setupGamerListeners() {
         });
     }
 
-    // Circular member selector tabs
-    const gamerTabs = document.querySelectorAll('.gamer-tab');
-    gamerTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            gamerTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            activeGamerMember = tab.getAttribute('data-member');
-            updateGamerUI();
-        });
-    });
+    // Member Modal open/close
+    const addMemberBtn = document.getElementById('btn-add-member');
+    const memberModal = document.getElementById('member-modal');
+    const closeMemberModalBtn = document.getElementById('btn-close-member-modal');
+    const cancelMemberModalBtn = document.getElementById('btn-cancel-member-modal');
+
+    const openMemberModal = () => {
+        if (memberModal) memberModal.classList.add('active');
+    };
+
+    const closeMemberModal = () => {
+        if (memberModal) memberModal.classList.remove('active');
+        const form = document.getElementById('member-form');
+        if (form) form.reset();
+    };
+
+    if (addMemberBtn) addMemberBtn.addEventListener('click', openMemberModal);
+    if (closeMemberModalBtn) closeMemberModalBtn.addEventListener('click', closeMemberModal);
+    if (cancelMemberModalBtn) cancelMemberModalBtn.addEventListener('click', closeMemberModal);
 
     // Reward Modal open/close
     const addRewardBtn = document.getElementById('btn-add-reward');
@@ -2070,6 +2079,25 @@ function setupGamerListeners() {
 function updateGamerUI() {
     if (!gamerState || !gamerState.profiles) return;
 
+    // Render gamer selector tabs dynamically
+    const tabsRow = document.querySelector('.gamer-tabs-row');
+    if (tabsRow) {
+        tabsRow.innerHTML = '';
+        gamerState.profiles.forEach(p => {
+            const btn = document.createElement('button');
+            btn.className = `gamer-tab ${activeGamerMember.toLowerCase() === p.nome.toLowerCase() ? 'active' : ''}`;
+            btn.setAttribute('data-member', p.nome);
+            btn.innerHTML = `${p.avatar} ${p.nome}`;
+            btn.addEventListener('click', () => {
+                tabsRow.querySelectorAll('.gamer-tab').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+                activeGamerMember = p.nome;
+                updateGamerUI();
+            });
+            tabsRow.appendChild(btn);
+        });
+    }
+
     // Find active user profile
     const char = gamerState.profiles.find(p => p.nome.toLowerCase() === activeGamerMember.toLowerCase()) || gamerState.character;
     if (!char) return;
@@ -2134,7 +2162,8 @@ function updateGamerUI() {
 
             const actionHtml = quest.completed
                 ? `<span class="quest-status-checked">⭐ Concluída</span>`
-                : `<button class="btn-complete" onclick="completeQuest(${quest.id})">Concluir</button>`;
+                : `<button class="btn-complete" onclick="completeQuest(${quest.id})">Concluir</button>
+                   <button class="btn-complete skip-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; color: #ff7675;" onclick="completeQuest(${quest.id}, true)">Pular</button>`;
 
             const isOverdue = quest.data < todayStr && !quest.completed;
             const overdueBadge = isOverdue ? '<span class="tag-difficulty" style="background-color: rgba(235, 94, 40, 0.15); color: #ff7675; border-color: rgba(235, 94, 40, 0.25);">⚠️ Acumulada</span>' : '';
@@ -2301,12 +2330,12 @@ window.completeReward = async function(rewardId) {
 };
 
 // Global scope handlers for onClick attributes in generated HTML
-window.completeQuest = async function (questId) {
+window.completeQuest = async function (questId, skip = false) {
     try {
         const res = await fetch('/api/todo-gamer/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quest_id: questId })
+            body: JSON.stringify({ quest_id: questId, skip: skip })
         });
         const data = await res.json();
 
@@ -2319,8 +2348,12 @@ window.completeQuest = async function (questId) {
         updateGamerUI();
         fetchCalendarData(); // Refresh calendar checks
 
-        // Show success rewards toast
-        showToast(`Quest Concluída! Ganhou +${data.reward_xp} XP e +${data.reward_gold} Ouro! ⚔️`, "success");
+        if (skip) {
+            showToast("Quest marcada como concluída/pulada (sem ganhar ouro/XP). 🕒", "info");
+        } else {
+            // Show success rewards toast
+            showToast(`Quest Concluída! Ganhou +${data.reward_xp} XP e +${data.reward_gold} Ouro! ⚔️`, "success");
+        }
 
         // Find if user leveled up
         const activeChar = gamerState.profiles.find(p => p.nome.toLowerCase() === activeGamerMember.toLowerCase());
@@ -2556,6 +2589,54 @@ window.confirmDeleteReward = async function (reward) {
             console.error("Error deleting reward:", err);
             showToast("Erro de conexão ao excluir recompensa.", "warning");
         }
+    }
+};
+
+// Member Form Submission
+window.submitMemberForm = async function () {
+    const nome = document.getElementById('member-name-input').value.trim();
+    const avatar = document.getElementById('member-avatar-input').value.trim();
+    const classe = document.getElementById('member-class-input').value.trim();
+    const idade = document.getElementById('member-age-input').value.trim();
+    const telefone = document.getElementById('member-phone-input').value.trim();
+
+    if (!nome) {
+        showToast("Por favor, preencha o nome do jogador.", "warning");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/todo-gamer/usuario/cadastrar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: nome,
+                avatar: avatar,
+                classe: classe,
+                idade: idade || null,
+                telefone: telefone || null
+            })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            gamerState.profiles = data.profiles;
+            activeGamerMember = nome; // select the newly created user
+            updateGamerUI();
+            
+            // Hide modal & reset form
+            const memberModal = document.getElementById('member-modal');
+            if (memberModal) memberModal.classList.remove('active');
+            const form = document.getElementById('member-form');
+            if (form) form.reset();
+            
+            showToast("Jogador cadastrado com sucesso! 🎉", "success");
+        } else {
+            showToast(`Erro: ${data.error}`, "warning");
+        }
+    } catch (err) {
+        console.error("Error creating member:", err);
+        showToast("Erro de conexão ao cadastrar jogador.", "warning");
     }
 };
 
