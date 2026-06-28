@@ -48,7 +48,9 @@ def classify_category(text):
         return 'Ferramentas'
     if any(word in text_lower for word in ['caixa', 'guardado', 'gaveta', 'armario', 'sotao', 'maleiro', 'organizar', 'limpeza', 'escondido', 'natal', 'decoracao']):
         return 'Organização'
-    if any(word in text_lower for word in ['pipoca', 'cachorro', 'gato', 'pet', 'vacina', 'racao', 'veterinario', 'remedio']):
+    if any(word in text_lower for word in ['farmacia', 'farmácia', 'remedio', 'remédio', 'medicamento', 'drogaria']):
+        return 'Farmácia'
+    if any(word in text_lower for word in ['pipoca', 'cachorro', 'gato', 'pet', 'vacina', 'racao', 'veterinario']):
         return 'Pets'
     if any(word in text_lower for word in ['receita', 'receitas', 'ingredientes', 'passo a passo', 'preparo', 'cozinhar']):
         return 'Receitas'
@@ -193,12 +195,17 @@ def clean_item_name(item):
     
     # Common prefixes to remove
     prefixes = [
+        "para a lista de farmacia ", "para a lista de farmácia ", "para a lista de remedios ", "para a lista de remédios ",
+        "da lista de farmacia ", "da lista de farmácia ", "da lista de remedios ", "da lista de remédios ",
+        "na lista de farmacia ", "na lista de farmácia ", "na lista de remedios ", "na lista de remédios ",
+        "lista de farmacia ", "lista de farmácia ", "lista de remedios ", "lista de remédios ",
         "para a lista de compras ", "para a lista de mercado ", "para a lista de comprar ",
         "da lista de compras ", "da lista de mercado ", "da lista de comprar ",
         "na lista de compras ", "na lista de mercado ", "na lista de comprar ",
         "lista de compras ", "lista de mercado ", "lista de comprar ",
         "para a lista ", "da lista ", "na lista ", "de lista ",
         "do mercado ", "de mercado ", "de compras ",
+        "de farmacia ", "de farmácia ", "do remedio ", "do remédio ", "de remedio ", "de remédio ", "de remedios ", "de remédios ",
         "de ", "do ", "da ", "para ", "pra ", "na ", "no ", "comprar ",
         "o ", "a ", "os ", "as ", "um ", "uma ", "uns ", "umas "
     ]

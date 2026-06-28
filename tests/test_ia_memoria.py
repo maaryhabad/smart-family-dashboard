@@ -56,6 +56,8 @@ class TestNLPEngine(unittest.TestCase):
         self.assertEqual(classify_category("Ir ao mercado comprar pão"), "Mercado")
         self.assertEqual(classify_category("Lista de compras do mercado: banana, maçã, cenoura e ração do cachorro"), "Mercado")
         self.assertEqual(classify_category("Lembrete geral aleatório"), "Geral")
+        self.assertEqual(classify_category("Comprar remédio de dor de cabeça na drogaria"), "Farmácia")
+        self.assertEqual(classify_category("Guardar o medicamento paracetamol na farmácia"), "Farmácia")
         
 
         
@@ -112,6 +114,8 @@ class TestNLPEngine(unittest.TestCase):
         self.assertEqual(clean_item_name("areia dos gatos"), "Areia dos gatos")
         self.assertEqual(clean_item_name("para a lista de compras pão"), "Pão")
         self.assertEqual(clean_item_name(""), "")
+        self.assertEqual(clean_item_name("para a lista de farmácia paracetamol"), "Paracetamol")
+        self.assertEqual(clean_item_name("da lista de remédios dipirona"), "Dipirona")
 
 
 
@@ -523,6 +527,65 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertEqual(assistant_json["intencao"], "remover_calendario")
         self.assertEqual(assistant_json["detalhes"]["titulo"], "Consulta Dentista")
         self.assertEqual(assistant_json["detalhes"]["data"], "2026-06-15")
+
+    @patch('threading.Thread', new=MockThread)
+    @patch('subprocess.run')
+    def test_feedback_route_farmacia_adicionar_lista(self, mock_subproc):
+        # Post feedback to add items to farmacia list
+        response = self.client.post('/api/ia-memoria/feedback', json={
+            "message": "coloca dipirona na farmácia",
+            "correct_intent": "adicionar_lista",
+            "details": "dipirona"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["success"])
+        
+        # Verify database update
+        memories = get_all_memories(TEST_DB_PATH)
+        m_list = next(m for m in memories if m["categoria"] == "Farmácia")
+        self.assertIn("Dipirona", m_list["conteudo"])
+
+    @patch('threading.Thread', new=MockThread)
+    @patch('subprocess.run')
+    def test_feedback_route_farmacia_remover_lista(self, mock_subproc):
+        # Save initial farmacia list
+        save_memory("Farmácia", "lista compras farmacia", "A lista de farmácia é: Paracetamol, Ibuprofeno.", TEST_DB_PATH)
+        
+        # Post feedback to remove item
+        response = self.client.post('/api/ia-memoria/feedback', json={
+            "message": "tira o ibuprofeno da farmácia",
+            "correct_intent": "remover_lista",
+            "details": "ibuprofeno"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["success"])
+        
+        # Verify DB update
+        memories = get_all_memories(TEST_DB_PATH)
+        m_list = next(m for m in memories if m["categoria"] == "Farmácia")
+        self.assertNotIn("Ibuprofeno", m_list["conteudo"])
+        self.assertIn("Paracetamol", m_list["conteudo"])
+
+    @patch('threading.Thread', new=MockThread)
+    @patch('subprocess.run')
+    def test_feedback_route_farmacia_composto_lista(self, mock_subproc):
+        # Save initial farmacia list
+        save_memory("Farmácia", "lista compras farmacia", "A lista de farmácia é: Paracetamol, Ibuprofeno.", TEST_DB_PATH)
+        
+        # Post feedback to execute compound update on farmacia list
+        response = self.client.post('/api/ia-memoria/feedback', json={
+            "message": "adicionar dipirona e remover ibuprofeno da farmácia",
+            "correct_intent": "composto_lista",
+            "details": "adicionar dipirona, remover ibuprofeno"
+        })
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify DB update
+        memories = get_all_memories(TEST_DB_PATH)
+        m_list = next(m for m in memories if m["categoria"] == "Farmácia")
+        self.assertIn("Dipirona", m_list["conteudo"])
+        self.assertNotIn("Ibuprofeno", m_list["conteudo"])
+        self.assertIn("Paracetamol", m_list["conteudo"])
 
 
 
@@ -1528,6 +1591,94 @@ class TestTaskManagement(unittest.TestCase):
         data = response.get_json()
         self.assertIn("Recompensas Resgatadas (Pendentes de Entrega)", data["reply"])
         self.assertIn(reward['titulo'], data["reply"])
+
+    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    def test_chat_ollama_farmacia_adicionar_lista(self, mock_ollama):
+        mock_ollama.return_value = (True, {
+            "intencao": "adicionar_lista",
+            "detalhes": {
+                "adicionar_itens": ["dipirona", "xarope"]
+            }
+        })
+        
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "bota dipirona e xarope na lista de remédios"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("Nova lista de farmácia criada", data["reply"])
+        self.assertIn("Dipirona", data["reply"])
+        self.assertIn("Xarope", data["reply"])
+
+    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    def test_chat_ollama_farmacia_remover_lista(self, mock_ollama):
+        save_memory("Farmácia", "lista compras farmacia", "A lista de farmácia é: Paracetamol, Dipirona.", TEST_DB_PATH)
+        
+        mock_ollama.return_value = (True, {
+            "intencao": "remover_lista",
+            "detalhes": {
+                "remover_itens": ["dipirona"]
+            }
+        })
+        
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "remove a dipirona da farmácia"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("Itens removidos da lista", data["reply"])
+        
+        memories = get_all_memories(TEST_DB_PATH)
+        m_list = next(m for m in memories if m["categoria"] == "Farmácia")
+        self.assertNotIn("Dipirona", m_list["conteudo"])
+        self.assertIn("Paracetamol", m_list["conteudo"])
+
+    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    def test_chat_ollama_farmacia_composto_lista(self, mock_ollama):
+        save_memory("Farmácia", "lista compras farmacia", "A lista de farmácia é: Paracetamol, Ibuprofeno.", TEST_DB_PATH)
+        
+        mock_ollama.return_value = (True, {
+            "intencao": "composto_lista",
+            "detalhes": {
+                "adicionar_itens": ["dipirona"],
+                "remover_itens": ["ibuprofeno"]
+            }
+        })
+        
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "tira ibuprofeno e coloca dipirona na lista de farmácia"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("Lista de farmácia atualizada com sucesso", data["reply"])
+        self.assertIn("Dipirona", data["reply"])
+        
+        memories = get_all_memories(TEST_DB_PATH)
+        m_list = next(m for m in memories if m["categoria"] == "Farmácia")
+        self.assertIn("Dipirona", m_list["conteudo"])
+        self.assertNotIn("Ibuprofeno", m_list["conteudo"])
+        self.assertIn("Paracetamol", m_list["conteudo"])
+
+    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    def test_chat_ollama_farmacia_limpar_lista(self, mock_ollama):
+        save_memory("Farmácia", "lista compras farmacia", "A lista de farmácia é: Paracetamol, Dipirona.", TEST_DB_PATH)
+        
+        mock_ollama.return_value = (True, {
+            "intencao": "limpar_lista",
+            "detalhes": {
+                "manter_itens": []
+            }
+        })
+        
+        response = self.client.post('/api/ia-memoria/chat', json={
+            "message": "comprei todos os remédios da lista"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn("lista de farmácia foi limpa", data["reply"])
+        
+        memories = get_all_memories(TEST_DB_PATH)
+        self.assertFalse(any(m["categoria"] == "Farmácia" for m in memories))
 
 
 if __name__ == '__main__':

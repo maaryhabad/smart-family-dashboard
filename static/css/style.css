@@ -824,6 +824,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Category tags colors */
 .tag-senhas { background: rgba(156, 39, 176, 0.15); color: #e040fb; border: 1px solid rgba(156, 39, 176, 0.3); }
 .tag-mercado { background: rgba(254, 202, 87, 0.15); color: var(--color-yellow); border: 1px solid rgba(254, 202, 87, 0.3); }
+.tag-farmacia { background: rgba(29, 209, 161, 0.15); color: var(--color-green); border: 1px solid rgba(29, 209, 161, 0.3); }
 .tag-segurança { background: rgba(84, 160, 255, 0.15); color: var(--color-blue); border: 1px solid rgba(84, 160, 255, 0.3); }
 .tag-contatos { background: rgba(29, 209, 161, 0.15); color: var(--color-green); border: 1px solid rgba(29, 209, 161, 0.3); }
 .tag-ferramentas { background: rgba(255, 107, 107, 0.15); color: var(--color-red); border: 1px solid rgba(255, 107, 107, 0.3); }

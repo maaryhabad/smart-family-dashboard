@@ -1145,9 +1145,22 @@ def ia_chat():
                         
     # Now execute logic based on the determined intent
     if reply_text is None:
+        if is_compound or is_clear or is_add or is_remove:
+            msg_lower = message.lower()
+            if any(word in msg_lower for word in ['farmacia', 'farmácia', 'remedio', 'remédio', 'remedios', 'remédios', 'medicamento', 'drogaria']):
+                target_category = 'Farmácia'
+                list_name = 'farmácia'
+                list_title = 'de farmácia'
+                default_key = 'lista compras farmacia'
+            else:
+                target_category = 'Mercado'
+                list_name = 'compras'
+                list_title = 'do mercado'
+                default_key = 'lista compras mercado'
+
         if is_compound:
             memories = get_all_memories()
-            market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+            market_lists = [m for m in memories if m['categoria'] == target_category]
             
             # 1. Apply removals if list exists
             if market_lists:
@@ -1194,12 +1207,12 @@ def ia_chat():
                 else:
                     formatted_keep = merged_items[0]
                     
-                new_content = f"A lista de compras do mercado é: {formatted_keep}."
+                new_content = f"A lista {list_title} é: {formatted_keep}."
                 
                 if market_lists:
-                    save_memory("Mercado", market_lists[0]['chave'], new_content)
+                    save_memory(target_category, market_lists[0]['chave'], new_content)
                 else:
-                    save_memory("Mercado", "lista compras mercado", new_content)
+                    save_memory(target_category, default_key, new_content)
                     
                 formatted_bullets = format_list_to_bullets(new_content)
                 
@@ -1207,7 +1220,7 @@ def ia_chat():
                 added_str = ", ".join(items_to_add) if items_to_add else "nenhum"
                 
                 reply_text = (
-                    f"🛒 **Lista de compras updated com sucesso!**<br><br>"
+                    f"🛒 **Lista de {list_name} atualizada com sucesso!**<br><br>"
                     f"➖ **Removido(s):** {removed_str}<br>"
                     f"➕ **Adicionado(s):** {added_str}<br><br>"
                     f"📝 **Lista atualizada:**<br>{formatted_bullets}"
@@ -1215,14 +1228,14 @@ def ia_chat():
             else:
                 if market_lists:
                     delete_memory(market_lists[0]['id'])
-                reply_text = "🎉 **Lista de compras limpa!** Removi todos os itens solicitados e a lista de compras ficou vazia."
+                reply_text = f"🎉 **Lista {list_title} limpa!** Removi todos os itens solicitados e a lista ficou vazia."
                 
         elif is_clear:
             memories = get_all_memories()
-            market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+            market_lists = [m for m in memories if m['categoria'] == target_category]
             
             if not market_lists:
-                reply_text = "🤖 Não encontrei nenhuma lista de compras ativa nas minhas memórias para atualizar!"
+                reply_text = f"🤖 Não encontrei nenhuma lista {list_title} ativa nas minhas memórias para atualizar!"
             else:
                 target_list = market_lists[0]
                 
@@ -1232,8 +1245,8 @@ def ia_chat():
                         formatted_keep = ", ".join(keep_items[:-1]) + " e " + keep_items[-1]
                     else:
                         formatted_keep = keep_items[0]
-                    new_content = f"A lista de compras do mercado é: {formatted_keep}."
-                    save_memory("Mercado", target_list['chave'], new_content)
+                    new_content = f"A lista {list_title} é: {formatted_keep}."
+                    save_memory(target_category, target_list['chave'], new_content)
                     
                     formatted_bullets = format_list_to_bullets(new_content)
                     reply_text = (
@@ -1243,11 +1256,11 @@ def ia_chat():
                 else:
                     # Delete list entirely
                     delete_memory(target_list['id'])
-                    reply_text = "🎉 **Parabéns!** Todos os itens foram marcados como comprados e a lista de compras foi limpa das minhas memórias! 🛒"
+                    reply_text = f"🎉 **Parabéns!** Todos os itens foram marcados como comprados e a lista {list_title} foi limpa das minhas memórias! 🛒"
                     
         elif is_add:
             memories = get_all_memories()
-            market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+            market_lists = [m for m in memories if m['categoria'] == target_category]
             
             if not market_lists:
                 # If no list exists, create a new one!
@@ -1255,12 +1268,12 @@ def ia_chat():
                     formatted_items = ", ".join(items_to_add[:-1]) + " e " + items_to_add[-1]
                 else:
                     formatted_items = items_to_add[0]
-                new_content = f"A lista de compras do mercado é: {formatted_items}."
-                save_memory("Mercado", "lista compras mercado", new_content)
+                new_content = f"A lista {list_title} é: {formatted_items}."
+                save_memory(target_category, default_key, new_content)
                 
                 formatted_bullets = format_list_to_bullets(new_content)
                 reply_text = (
-                    f"🛒 **Nova lista criada!** Como não encontrei nenhuma lista ativa, criei uma nova com esses itens:<br><br>"
+                    f"🛒 **Nova lista {list_title} criada!** Como não encontrei nenhuma lista ativa, criei uma nova com esses itens:<br><br>"
                     f"{formatted_bullets}"
                 )
             else:
@@ -1299,24 +1312,24 @@ def ia_chat():
                     else:
                         formatted_keep = merged_items[0]
                         
-                    new_content = f"A lista de compras do mercado é: {formatted_keep}."
-                    save_memory("Mercado", target_list['chave'], new_content)
+                    new_content = f"A lista {list_title} é: {formatted_keep}."
+                    save_memory(target_category, target_list['chave'], new_content)
                     
                     formatted_bullets = format_list_to_bullets(new_content)
                     reply_text = (
-                        f"🛒 **Item adicionado à lista!** Atualizei sua lista de compras.<br><br>"
+                        f"🛒 **Item adicionado à lista!** Atualizei sua lista {list_title}.<br><br>"
                         f"📝 **Lista atualizada:**<br>{formatted_bullets}"
                     )
                 else:
                     delete_memory(target_list['id'])
-                    reply_text = "🎉 A lista de compras foi limpa das minhas memórias!"
+                    reply_text = f"🎉 A lista {list_title} foi limpa das minhas memórias!"
                     
         elif is_remove:
             memories = get_all_memories()
-            market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+            market_lists = [m for m in memories if m['categoria'] == target_category]
             
             if not market_lists:
-                reply_text = "🤖 Não encontrei nenhuma lista de compras ativa nas minhas memórias para remover itens!"
+                reply_text = f"🤖 Não encontrei nenhuma lista {list_title} ativa nas minhas memórias para remover itens!"
             else:
                 target_list = market_lists[0]
                 old_content = target_list['conteudo']
@@ -1351,17 +1364,17 @@ def ia_chat():
                     else:
                         formatted_keep = remaining_items[0]
                         
-                    new_content = f"A lista de compras do mercado é: {formatted_keep}."
-                    save_memory("Mercado", target_list['chave'], new_content)
+                    new_content = f"A lista {list_title} é: {formatted_keep}."
+                    save_memory(target_category, target_list['chave'], new_content)
                     
                     formatted_bullets = format_list_to_bullets(new_content)
                     reply_text = (
-                        f"🛒 **Itens removidos da lista!** Atualizei sua lista de compras.<br><br>"
+                        f"🛒 **Itens removidos da lista!** Atualizei sua lista {list_title}.<br><br>"
                         f"📝 **Lista atualizada:**<br>{formatted_bullets}"
                     )
                 else:
                     delete_memory(target_list['id'])
-                    reply_text = "🎉 **Lista limpa!** Removi todos os itens e limpei a lista de compras das minhas memórias."
+                    reply_text = f"🎉 **Lista limpa!** Removi todos os itens e limpei a lista {list_title} das minhas memórias."
                     
         elif is_save:
             category = classify_category(save_content)
@@ -1460,18 +1473,29 @@ def feedback_retrain():
         
     # Execute database correction logic immediately
     try:
+        # Determine target list category (either Mercado or Farmácia)
+        msg_lower = message.lower()
+        if any(word in msg_lower for word in ['farmacia', 'farmácia', 'remedio', 'remédio', 'remedios', 'remédios', 'medicamento', 'drogaria']):
+            target_category = 'Farmácia'
+            list_title = 'de farmácia'
+            default_key = 'lista compras farmacia'
+        else:
+            target_category = 'Mercado'
+            list_title = 'do mercado'
+            default_key = 'lista compras mercado'
+
         if correct_intent == "adicionar_lista":
             items_to_add = [clean_item_name(i) for i in details.split(",") if clean_item_name(i)]
             if items_to_add:
                 memories = get_all_memories()
-                market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+                market_lists = [m for m in memories if m['categoria'] == target_category]
                 if not market_lists:
                     if len(items_to_add) > 1:
                         formatted_items = ", ".join(items_to_add[:-1]) + " e " + items_to_add[-1]
                     else:
                         formatted_items = items_to_add[0]
-                    new_content = f"A lista de compras do mercado é: {formatted_items}."
-                    save_memory("Mercado", "lista compras mercado", new_content)
+                    new_content = f"A lista {list_title} é: {formatted_items}."
+                    save_memory(target_category, default_key, new_content)
                 else:
                     target_list = market_lists[0]
                     old_content = target_list['conteudo']
@@ -1498,8 +1522,8 @@ def feedback_retrain():
                             formatted_keep = ", ".join(merged_items[:-1]) + " e " + merged_items[-1]
                         else:
                             formatted_keep = merged_items[0]
-                        new_content = f"A lista de compras do mercado é: {formatted_keep}."
-                        save_memory("Mercado", target_list['chave'], new_content)
+                        new_content = f"A lista {list_title} é: {formatted_keep}."
+                        save_memory(target_category, target_list['chave'], new_content)
                     else:
                         delete_memory(target_list['id'])
                         
@@ -1507,7 +1531,7 @@ def feedback_retrain():
             items_to_remove = [clean_item_name(i) for i in details.split(",") if clean_item_name(i)]
             if items_to_remove:
                 memories = get_all_memories()
-                market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+                market_lists = [m for m in memories if m['categoria'] == target_category]
                 if market_lists:
                     target_list = market_lists[0]
                     old_content = target_list['conteudo']
@@ -1530,15 +1554,15 @@ def feedback_retrain():
                             formatted_keep = ", ".join(remaining_items[:-1]) + " e " + remaining_items[-1]
                         else:
                             formatted_keep = remaining_items[0]
-                        new_content = f"A lista de compras do mercado é: {formatted_keep}."
-                        save_memory("Mercado", target_list['chave'], new_content)
+                        new_content = f"A lista {list_title} é: {formatted_keep}."
+                        save_memory(target_category, target_list['chave'], new_content)
                     else:
                         delete_memory(target_list['id'])
                         
         elif correct_intent == "limpar_lista":
             keep_items = [clean_item_name(i) for i in details.split(",") if clean_item_name(i)]
             memories = get_all_memories()
-            market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+            market_lists = [m for m in memories if m['categoria'] == target_category]
             if market_lists:
                 target_list = market_lists[0]
                 if keep_items:
@@ -1546,8 +1570,8 @@ def feedback_retrain():
                         formatted_keep = ", ".join(keep_items[:-1]) + " e " + keep_items[-1]
                     else:
                         formatted_keep = keep_items[0]
-                    new_content = f"A lista de compras do mercado é: {formatted_keep}."
-                    save_memory("Mercado", target_list['chave'], new_content)
+                    new_content = f"A lista {list_title} é: {formatted_keep}."
+                    save_memory(target_category, target_list['chave'], new_content)
                 else:
                     delete_memory(target_list['id'])
                     
@@ -1638,7 +1662,7 @@ def feedback_retrain():
 
             if raw_add or raw_remove:
                 memories = get_all_memories()
-                market_lists = [m for m in memories if m['categoria'] == 'Mercado']
+                market_lists = [m for m in memories if m['categoria'] == target_category]
                 
                 # Apply removals
                 if market_lists:
@@ -1680,12 +1704,12 @@ def feedback_retrain():
                         formatted_keep = ", ".join(merged_items[:-1]) + " e " + merged_items[-1]
                     else:
                         formatted_keep = merged_items[0]
-                    new_content = f"A lista de compras do mercado é: {formatted_keep}."
+                    new_content = f"A lista {list_title} é: {formatted_keep}."
                     
                     if market_lists:
-                        save_memory("Mercado", market_lists[0]['chave'], new_content)
+                        save_memory(target_category, market_lists[0]['chave'], new_content)
                     else:
-                        save_memory("Mercado", "lista compras mercado", new_content)
+                        save_memory(target_category, default_key, new_content)
                 else:
                     if market_lists:
                         delete_memory(market_lists[0]['id'])
