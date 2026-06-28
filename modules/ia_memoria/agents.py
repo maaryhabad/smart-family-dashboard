@@ -558,8 +558,9 @@ class ListAgent(BaseAgent):
                     save_memory(target_category, default_key, new_content)
                 formatted_bullets = format_list_to_bullets(new_content)
                 if not target_list:
+                    list_title_msg = " de farmácia" if target_category == 'Farmácia' else ""
                     return (
-                        f"🛒 **Nova lista {list_title} criada!** Como não encontrei nenhuma lista ativa, criei uma nova com esses itens:<br><br>"
+                        f"🛒 **Nova lista{list_title_msg} criada!** Como não encontrei nenhuma lista ativa, criei uma nova com esses itens:<br><br>"
                         f"{formatted_bullets}"
                     )
                 else:

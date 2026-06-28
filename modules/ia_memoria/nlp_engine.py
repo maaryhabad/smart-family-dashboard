@@ -36,6 +36,8 @@ def tokenize(text):
 def classify_category(text):
     """Categorizes a memory automatically based on keyword matching."""
     text_lower = text.lower()
+    if any(word in text_lower for word in ['farmacia', 'farmácia', 'remedio', 'remédio', 'medicamento', 'drogaria']):
+        return 'Farmácia'
     if any(word in text_lower for word in ['lista', 'compra', 'mercado', 'supermercado', 'feira', 'comprar', 'compras']):
         return 'Mercado'
     if any(word in text_lower for word in ['senha', 'wifi', 'wi-fi', 'acesso', 'login', 'password', 'roteador']):
@@ -48,8 +50,6 @@ def classify_category(text):
         return 'Ferramentas'
     if any(word in text_lower for word in ['caixa', 'guardado', 'gaveta', 'armario', 'sotao', 'maleiro', 'organizar', 'limpeza', 'escondido', 'natal', 'decoracao']):
         return 'Organização'
-    if any(word in text_lower for word in ['farmacia', 'farmácia', 'remedio', 'remédio', 'medicamento', 'drogaria']):
-        return 'Farmácia'
     if any(word in text_lower for word in ['pipoca', 'cachorro', 'gato', 'pet', 'vacina', 'racao', 'veterinario']):
         return 'Pets'
     if any(word in text_lower for word in ['receita', 'receitas', 'ingredientes', 'passo a passo', 'preparo', 'cozinhar']):

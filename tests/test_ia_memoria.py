@@ -1592,7 +1592,7 @@ class TestTaskManagement(unittest.TestCase):
         self.assertIn("Recompensas Resgatadas (Pendentes de Entrega)", data["reply"])
         self.assertIn(reward['titulo'], data["reply"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_farmacia_adicionar_lista(self, mock_ollama):
         mock_ollama.return_value = (True, {
             "intencao": "adicionar_lista",
@@ -1610,7 +1610,7 @@ class TestTaskManagement(unittest.TestCase):
         self.assertIn("Dipirona", data["reply"])
         self.assertIn("Xarope", data["reply"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_farmacia_remover_lista(self, mock_ollama):
         save_memory("Farmácia", "lista compras farmacia", "A lista de farmácia é: Paracetamol, Dipirona.", TEST_DB_PATH)
         
@@ -1633,7 +1633,7 @@ class TestTaskManagement(unittest.TestCase):
         self.assertNotIn("Dipirona", m_list["conteudo"])
         self.assertIn("Paracetamol", m_list["conteudo"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_farmacia_composto_lista(self, mock_ollama):
         save_memory("Farmácia", "lista compras farmacia", "A lista de farmácia é: Paracetamol, Ibuprofeno.", TEST_DB_PATH)
         
@@ -1659,7 +1659,7 @@ class TestTaskManagement(unittest.TestCase):
         self.assertNotIn("Ibuprofeno", m_list["conteudo"])
         self.assertIn("Paracetamol", m_list["conteudo"])
 
-    @patch('modules.ia_memoria.routes.parse_intent_with_ollama')
+    @patch('modules.ia_memoria.orchestrator.parse_intent_with_ollama')
     def test_chat_ollama_farmacia_limpar_lista(self, mock_ollama):
         save_memory("Farmácia", "lista compras farmacia", "A lista de farmácia é: Paracetamol, Dipirona.", TEST_DB_PATH)
         
