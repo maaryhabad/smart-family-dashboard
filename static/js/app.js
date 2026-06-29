@@ -2074,6 +2074,90 @@ function setupGamerListeners() {
             }
         });
     }
+
+    // Extra Points Modal open/close
+    const addExtraPointsBtn = document.getElementById('btn-add-extra-action');
+    const extraPointsModal = document.getElementById('extra-points-modal');
+    const closeExtraPointsModalBtn = document.getElementById('btn-close-extra-points-modal');
+    const cancelExtraPointsModalBtn = document.getElementById('btn-cancel-extra-points-modal');
+
+    const openExtraPointsModal = () => {
+        const modal = document.getElementById('extra-points-modal');
+        const select = document.getElementById('extra-points-user');
+        const descInput = document.getElementById('extra-points-desc');
+        const xpInput = document.getElementById('extra-points-xp');
+        const goldInput = document.getElementById('extra-points-gold');
+        
+        if (descInput) descInput.value = '';
+        if (xpInput) xpInput.value = 15;
+        if (goldInput) goldInput.value = 5;
+        
+        if (select && gamerState && gamerState.profiles) {
+            select.innerHTML = gamerState.profiles.map(p => `<option value="${p.nome}">${p.nome}</option>`).join('');
+            select.value = activeGamerMember;
+        }
+        
+        if (modal) modal.classList.add('active');
+    };
+
+    const closeExtraPointsModal = () => {
+        if (extraPointsModal) extraPointsModal.classList.remove('active');
+        const form = document.getElementById('extra-points-form');
+        if (form) form.reset();
+    };
+
+    if (addExtraPointsBtn) addExtraPointsBtn.addEventListener('click', openExtraPointsModal);
+    if (closeExtraPointsModalBtn) closeExtraPointsModalBtn.addEventListener('click', closeExtraPointsModal);
+    if (cancelExtraPointsModalBtn) cancelExtraPointsModalBtn.addEventListener('click', closeExtraPointsModal);
+
+    // Extra Points Form Submission
+    const extraPointsForm = document.getElementById('extra-points-form');
+    if (extraPointsForm) {
+        extraPointsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = document.getElementById('extra-points-user').value;
+            const desc = document.getElementById('extra-points-desc').value.trim();
+            const xpVal = parseInt(document.getElementById('extra-points-xp').value);
+            const goldVal = parseInt(document.getElementById('extra-points-gold').value);
+
+            if (!desc || isNaN(xpVal) || isNaN(goldVal)) {
+                showToast("Por favor, preencha todos os campos corretamente.", "warning");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/todo-gamer/extra-points', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        usuario_nome: user,
+                        descricao: desc,
+                        reward_xp: xpVal,
+                        reward_gold: goldVal
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    gamerState = data.state;
+                    updateGamerUI();
+                    closeExtraPointsModal();
+                    showToast(`Ação registrada! ${user} ganhou +${data.reward_xp} XP e +${data.reward_gold} Ouro! ⚡`, "success");
+                    
+                    const activeChar = gamerState.profiles.find(p => p.nome.toLowerCase() === user.toLowerCase());
+                    if (data.leveled_up && activeChar) {
+                        setTimeout(() => {
+                            showToast(`🎉 PARABÉNS! ${activeChar.nome} subiu para o Nível ${activeChar.nivel}! ✨ Novos poderes liberados!`, "success");
+                        }, 1000);
+                    }
+                } else {
+                    showToast(`Erro: ${data.error}`, "warning");
+                }
+            } catch (err) {
+                showToast("Erro ao registrar ação extra.", "warning");
+            }
+        });
+    }
 }
 
 function updateGamerUI() {
@@ -2481,6 +2565,10 @@ function openQuestModal(quest = null) {
     const goldInput = document.getElementById('edit-quest-gold');
 
     form.reset();
+
+    if (userInput && gamerState && gamerState.profiles) {
+        userInput.innerHTML = gamerState.profiles.map(p => `<option value="${p.nome}">${p.nome}</option>`).join('');
+    }
 
     if (quest) {
         title.textContent = "Editar Missão";

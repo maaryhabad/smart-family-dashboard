@@ -1143,6 +1143,48 @@ class TestGamifiedTasks(unittest.TestCase):
         self.assertEqual(intent_rewards2, "listar_recompensas_resgatadas")
         self.assertEqual(details_rewards2['usuario'], "Cassi")
 
+    def test_add_unplanned_action_points(self):
+        from modules.ia_memoria.database import add_unplanned_action_points, get_all_tasks, get_user_by_name
+        
+        # Initial user state
+        mari_before = get_user_by_name("Mari", TEST_DB_PATH)
+        self.assertIsNotNone(mari_before)
+        
+        # Add unplanned action points
+        success, user_profile, leveled_up = add_unplanned_action_points(
+            "Mari", "Ajudou a descarregar compras", 20, 5, TEST_DB_PATH
+        )
+        self.assertTrue(success)
+        self.assertEqual(user_profile["xp"], mari_before["xp"] + 20)
+        self.assertEqual(user_profile["gold"], mari_before["gold"] + 5)
+        self.assertFalse(leveled_up)
+        
+        # Verify task is created as completed
+        tasks = get_all_tasks(TEST_DB_PATH)
+        extra_task = next((t for t in tasks if t["titulo"] == "Ajudou a descarregar compras"), None)
+        self.assertIsNotNone(extra_task)
+        self.assertEqual(extra_task["usuario_nome"], "Mari")
+        self.assertEqual(extra_task["categoria"], "Extra")
+        self.assertEqual(extra_task["dificuldade"], "Reconhecimento")
+        self.assertEqual(extra_task["completed"], 1)
+        self.assertEqual(extra_task["reward_xp"], 20)
+        self.assertEqual(extra_task["reward_gold"], 5)
+        
+        # Test level up logic
+        conn = get_db_connection(TEST_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE usuarios SET xp = 90, gold = 0, nivel = 1, xp_to_next_level = 100 WHERE nome = 'Mari'")
+        conn.commit()
+        conn.close()
+        
+        success2, user_profile2, leveled_up2 = add_unplanned_action_points(
+            "Mari", "Outra acao extra", 20, 5, TEST_DB_PATH
+        )
+        self.assertTrue(success2)
+        self.assertTrue(leveled_up2)
+        self.assertEqual(user_profile2["nivel"], 2)
+        self.assertEqual(user_profile2["xp"], 10) # 90 + 20 - 100 = 10
+
 
 class TestDeletedEventsQueue(unittest.TestCase):
     def setUp(self):
@@ -1679,6 +1721,39 @@ class TestTaskManagement(unittest.TestCase):
         
         memories = get_all_memories(TEST_DB_PATH)
         self.assertFalse(any(m["categoria"] == "Farmácia" for m in memories))
+
+    def test_add_extra_points_api(self):
+        # 1. Successful request
+        response = self.client.post('/api/todo-gamer/extra-points', json={
+            "usuario_nome": "Mari",
+            "descricao": "Limpou o fogao",
+            "reward_xp": 20,
+            "reward_gold": 5
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["message"], "Pontos e Ouro extras concedidos com sucesso!")
+        self.assertEqual(data["reward_xp"], 20)
+        self.assertEqual(data["reward_gold"], 5)
+        
+        # Verify user has stats updated (Mari is first user, represented by character key)
+        self.assertEqual(data["state"]["character"]["xp"], 20)
+        self.assertEqual(data["state"]["character"]["gold"], 5)
+        
+        # 2. Missing fields request
+        response_invalid = self.client.post('/api/todo-gamer/extra-points', json={
+            "usuario_nome": "Mari"
+        })
+        self.assertEqual(response_invalid.status_code, 400)
+        self.assertIn("error", response_invalid.get_json())
+        
+        # 3. Non-existent user
+        response_no_user = self.client.post('/api/todo-gamer/extra-points', json={
+            "usuario_nome": "UsuarioInexistente",
+            "descricao": "Acao extra"
+        })
+        self.assertEqual(response_no_user.status_code, 404)
 
 
 if __name__ == '__main__':

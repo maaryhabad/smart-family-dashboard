@@ -312,3 +312,42 @@ def cadastrar_usuario_route():
         "message": msg,
         "profiles": users
     })
+
+@todo_gamer_bp.route('/api/todo-gamer/extra-points', methods=['POST'])
+def add_extra_points_route():
+    data = request.json or {}
+    usuario_nome = data.get("usuario_nome", "").strip()
+    descricao = data.get("descricao", "").strip()
+    
+    try:
+        reward_xp = int(data.get("reward_xp", 15))
+        reward_gold = int(data.get("reward_gold", 5))
+    except (ValueError, TypeError):
+        return jsonify({"error": "XP e Ouro devem ser números inteiros."}), 400
+        
+    if not usuario_nome or not descricao:
+        return jsonify({"error": "Usuário e descrição são obrigatórios."}), 400
+        
+    from modules.ia_memoria.database import add_unplanned_action_points, get_all_users, get_all_tasks, get_all_rewards
+    
+    success, user_profile, leveled_up = add_unplanned_action_points(usuario_nome, descricao, reward_xp, reward_gold)
+    if not success:
+        return jsonify({"error": "Usuário não encontrado."}), 404
+        
+    users = get_all_users()
+    tasks = get_all_tasks()
+    rewards = get_all_rewards()
+    
+    return jsonify({
+        "success": True,
+        "message": "Pontos e Ouro extras concedidos com sucesso!",
+        "leveled_up": leveled_up,
+        "reward_xp": reward_xp,
+        "reward_gold": reward_gold,
+        "state": {
+            "character": users[0] if users else {},
+            "profiles": users,
+            "quests": tasks,
+            "rewards": rewards
+        }
+    })

@@ -39,6 +39,7 @@ Transforma as tarefas domésticas da casa em uma jornada divertida de RPG (Role-
 * **Resgate de Recompensas**: Loja de itens com preços em ouro virtual, permitindo que cada usuário troque seu ouro por recompensas customizadas (ex: SPA para Mari, Videogame para Cassi, Desenhos/Tablet para Isa).
 * **NLU Conversacional**: Conclusão de tarefas e resgate de recompensas podem ser feitos digitando comandos diretamente no chat (ex: *"completei a tarefa de limpar a caixa de areia"* ou *"Isa quer comprar a recompensa de historinha"*), com fallback local offline robusto.
 * **Divisão Justa de Tarefas Domésticas**: Cassi e Mari dividem as tarefas semanais na metade (50/50) de forma aleatória a cada carregamento de diárias, e a pequena Isa fica responsável pelas tarefas adequadas para a idade, como *"Tirar o lixo do banheiro"* (2x por semana) e *"Verificar água dos gatos"* (2x por semana).
+* **Reconhecimento de Ações Extras (Não Planejadas)**: Permite recompensar membros da família com bônus de XP e Ouro por ações nobres espontâneas (ex: ajudar a carregar as compras, limpar algo sem ninguém pedir). O registro da ação é inserido no quadro sob a categoria "Extra" e com status "⭐ Concluída" para servir como histórico.
 
 ---
 
@@ -161,6 +162,53 @@ curl -X POST http://127.0.0.1:5000/api/todo-gamer/usuario/cadastrar \
     { "id": 3, "nome": "Isa", "avatar": "👧", "classe": "Pequena Aprendiz", "nivel": 1, "xp": 0, "xp_to_next_level": 100, "gold": 0, "idade": null, "telefone": null },
     { "id": 4, "nome": "Rodrigo", "avatar": "🛡️", "classe": "Guerreiro", "nivel": 1, "xp": 0, "xp_to_next_level": 100, "gold": 0, "idade": 35, "telefone": "(11) 99999-8888" }
   ]
+}
+```
+
+---
+
+## ⚡ Walkthrough/Tutorial: Conceder Pontos por Ação Extra
+
+A concessão de pontos por ações não planejadas/reconhecimento pode ser realizada de duas formas:
+
+### 1. Via Interface Gráfica (Painel)
+1. Acesse o painel e selecione a aba **To-Do List Gamer**.
+2. Clique no botão **⚡ Ação Extra** no cabeçalho do Quadro de Missões Ativas.
+3. No modal que abrir, preencha:
+   - **Membro da Família**: Quem receberá o bônus.
+   - **O que ele(a) fez de bom?**: Descrição da ação (ex: `Ajudou a carregar as compras do mercado`).
+   - **XP Bônus** e **Ouro Bônus**: Pontuações a conceder (padrões de 15 XP e 5 Ouro).
+4. Clique em **Conceder Bônus ⚡**. A pontuação e ouro do jogador serão atualizados imediatamente (incluindo level-up automático caso o XP ultrapasse o limite) e a ação aparecerá listada no quadro de missões de hoje com o status "⭐ Concluída".
+
+### 2. Via Chamada de API (POST)
+Você pode enviar uma requisição HTTP do tipo `POST` para o endpoint `/api/todo-gamer/extra-points`.
+
+**Exemplo de Requisição cURL:**
+```bash
+curl -X POST http://127.0.0.1:5000/api/todo-gamer/extra-points \
+  -H "Content-Type: application/json" \
+  -d '{
+    "usuario_nome": "Mari",
+    "descricao": "Limpou o fogão espontaneamente",
+    "reward_xp": 20,
+    "reward_gold": 5
+  }'
+```
+
+**Exemplo de Resposta de Sucesso (JSON):**
+```json
+{
+  "success": true,
+  "message": "Pontos e Ouro extras concedidos com sucesso!",
+  "leveled_up": false,
+  "reward_xp": 20,
+  "reward_gold": 5,
+  "state": {
+    "character": { ... },
+    "profiles": [ ... ],
+    "quests": [ ... ],
+    "rewards": [ ... ]
+  }
 }
 ```
 

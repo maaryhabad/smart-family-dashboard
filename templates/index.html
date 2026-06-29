@@ -438,6 +438,8 @@
                                             Diárias</button>
                                         <button class="btn btn-primary btn-sm" id="btn-add-quest"
                                             style="font-size: 0.75rem; padding: 4px 8px;">+ Nova Missão</button>
+                                        <button class="btn btn-success btn-sm" id="btn-add-extra-action"
+                                            style="font-size: 0.75rem; padding: 4px 8px; border: none;">⚡ Ação Extra</button>
                                     </div>
                                 </div>
                                 <div class="quests-list" id="quests-list">
@@ -1102,6 +1104,54 @@
                         <button type="submit" class="btn btn-primary" id="btn-save-quest-modal"
                             style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; background:#5f27cd; color:white;">Salvar
                             Missão</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Add Extra Points Modal -->
+    <div class="modal-overlay" id="extra-points-modal">
+        <div class="modal-content glass-panel" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 id="extra-points-modal-title">⚡ Reconhecer Ação Extra</h3>
+                <button class="btn-close-modal" id="btn-close-extra-points-modal"
+                    style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="extra-points-form" onsubmit="event.preventDefault();">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="extra-points-user" style="display:block; margin-bottom:5px; font-weight:500;">Membro da Família</label>
+                        <select id="extra-points-user" required
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                            <!-- Dynamically populated via JS -->
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="extra-points-desc" style="display:block; margin-bottom:5px; font-weight:500;">O que ele(a) fez de bom?</label>
+                        <input type="text" id="extra-points-desc" placeholder="Ex: Lavou a louça sem ninguém pedir, Ajudou nas compras..." required
+                            style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="extra-points-xp" style="display:block; margin-bottom:5px; font-weight:500;">XP Bônus</label>
+                            <input type="number" id="extra-points-xp" required min="1" value="15"
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="extra-points-gold" style="display:block; margin-bottom:5px; font-weight:500;">Ouro Bônus</label>
+                            <input type="number" id="extra-points-gold" required min="1" value="5"
+                                style="width:100%; padding:8px; border-radius:4px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.25);">
+                        </div>
+                    </div>
+
+                    <div class="modal-footer" style="margin-top: 25px; display:flex; justify-content:flex-end; gap:10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-extra-points-modal"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer;">Cancelar</button>
+                        <button type="submit" id="btn-save-extra-points" class="btn btn-success"
+                            style="padding: 8px 16px; border-radius:4px; border:none; cursor:pointer; font-weight:bold;">Conceder Bônus ⚡</button>
                     </div>
                 </form>
             </div>

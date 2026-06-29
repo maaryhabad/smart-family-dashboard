@@ -1942,3 +1942,13 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--text-white);
     box-shadow: 0 4px 15px var(--color-primary-glow);
 }
+
+.btn-success {
+    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+}
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(46, 204, 113, 0.5);
+}

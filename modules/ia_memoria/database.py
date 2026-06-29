@@ -931,6 +931,47 @@ def complete_task_in_db(task_id, db_path=None, skip=False):
     conn.close()
     return True, get_user_by_name(user_nome, target_path), leveled_up
 
+def add_unplanned_action_points(usuario_nome, descricao, reward_xp, reward_gold, db_path=None):
+    target_path = db_path if db_path else DATABASE_PATH
+    conn = get_db_connection(target_path)
+    cursor = conn.cursor()
+    
+    today_str = datetime.date.today().strftime('%Y-%m-%d')
+    now_time = datetime.datetime.now().strftime('%H:%M')
+    
+    cursor.execute('''
+        INSERT INTO tarefas (usuario_nome, titulo, categoria, dificuldade, reward_xp, reward_gold, completed, data, hora)
+        VALUES (?, ?, 'Extra', 'Reconhecimento', ?, ?, 1, ?, ?)
+    ''', (usuario_nome, descricao, reward_xp, reward_gold, today_str, now_time))
+    conn.commit()
+    
+    cursor.execute("SELECT id, nome, avatar, classe, nivel, xp, xp_to_next_level, gold FROM usuarios WHERE LOWER(nome) = ?", (usuario_nome.lower(),))
+    user_row = cursor.fetchone()
+    if not user_row:
+        conn.close()
+        return False, None, False
+        
+    xp = user_row['xp'] + reward_xp
+    gold = user_row['gold'] + reward_gold
+    nivel = user_row['nivel']
+    xp_to_next = user_row['xp_to_next_level']
+    leveled_up = False
+    
+    while xp >= xp_to_next:
+        xp -= xp_to_next
+        nivel += 1
+        xp_to_next = int(xp_to_next * 1.2)
+        leveled_up = True
+        
+    cursor.execute(
+        "UPDATE usuarios SET xp = ?, gold = ?, nivel = ?, xp_to_next_level = ? WHERE id = ?",
+        (xp, gold, nivel, xp_to_next, user_row['id'])
+    )
+    conn.commit()
+    conn.close()
+    
+    return True, get_user_by_name(usuario_nome, target_path), leveled_up
+
 def reset_tasks_db(db_path=None):
     target_path = db_path if db_path else DATABASE_PATH
     conn = get_db_connection(target_path)
