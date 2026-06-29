@@ -860,6 +860,27 @@ def complete_task_in_db(task_id, db_path=None, skip=False):
     cursor.execute("UPDATE tarefas SET completed = 1 WHERE id = ?", (task_id,))
     conn.commit()
     
+    # Mark all other uncompleted tasks with the same title for this user as completed (clearing accumulation)
+    cursor.execute(
+        "SELECT id, evento_calendario_id FROM tarefas WHERE LOWER(usuario_nome) = ? AND LOWER(titulo) = ? AND completed = 0 AND id != ?",
+        (task['usuario_nome'].lower(), task['titulo'].lower(), task_id)
+    )
+    other_tasks = cursor.fetchall()
+    for ot in other_tasks:
+        cursor.execute("UPDATE tarefas SET completed = 1 WHERE id = ?", (ot['id'],))
+        conn.commit()
+        
+        g_id = ot['evento_calendario_id']
+        if g_id:
+            cursor.execute("SELECT titulo FROM eventos WHERE id = ?", (g_id,))
+            event = cursor.fetchone()
+            if event:
+                curr_title = event['titulo']
+                if not curr_title.startswith('✅'):
+                    new_title = f"✅ {curr_title}"
+                    cursor.execute("UPDATE eventos SET titulo = ? WHERE id = ?", (new_title, g_id))
+                    conn.commit()
+    
     user_nome = task['usuario_nome']
     
     if skip:

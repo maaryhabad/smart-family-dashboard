@@ -1060,6 +1060,38 @@ class TestGamifiedTasks(unittest.TestCase):
         self.assertEqual(user_profile2['nivel'], 2)
         self.assertEqual(user_profile2['xp'], (95 + cassi_task['reward_xp']) - 100)
 
+    def test_complete_accumulated_tasks(self):
+        from modules.ia_memoria.database import save_task, get_tasks_for_user, complete_task_in_db, get_all_events
+        import datetime
+        
+        # 1. Create multiple uncompleted tasks with the same title for Mari on different days
+        today_str = datetime.date.today().strftime('%Y-%m-%d')
+        yesterday_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        task1_id = save_task("Mari", "Colocar roupa no cesto", "Organização", "Fácil", 10, 1, yesterday_str, "10:00", db_path=TEST_DB_PATH)
+        task2_id = save_task("Mari", "Colocar roupa no cesto", "Organização", "Fácil", 10, 1, today_str, "10:00", db_path=TEST_DB_PATH)
+        
+        # Verify they are both created and uncompleted
+        tasks = get_tasks_for_user("Mari", TEST_DB_PATH)
+        self.assertEqual(next(t for t in tasks if t['id'] == task1_id)['completed'], 0)
+        self.assertEqual(next(t for t in tasks if t['id'] == task2_id)['completed'], 0)
+        
+        # 2. Complete the oldest task (yesterday's task) and verify both tasks are marked completed
+        success, user_profile, leveled_up = complete_task_in_db(task1_id, TEST_DB_PATH)
+        self.assertTrue(success)
+        
+        # Verify both are completed in the DB
+        tasks_after = get_tasks_for_user("Mari", TEST_DB_PATH)
+        self.assertEqual(next(t for t in tasks_after if t['id'] == task1_id)['completed'], 1)
+        self.assertEqual(next(t for t in tasks_after if t['id'] == task2_id)['completed'], 1)
+        
+        # Verify both calendar events are checked ✅
+        events = get_all_events(TEST_DB_PATH)
+        evt1 = next(e for e in events if e['id'] == next(t for t in tasks_after if t['id'] == task1_id)['evento_calendario_id'])
+        evt2 = next(e for e in events if e['id'] == next(t for t in tasks_after if t['id'] == task2_id)['evento_calendario_id'])
+        self.assertTrue(evt1['titulo'].startswith('✅'))
+        self.assertTrue(evt2['titulo'].startswith('✅'))
+
     def test_redeem_reward(self):
         from modules.ia_memoria.database import get_rewards_for_user, redeem_reward_in_db, get_user_by_name
         
